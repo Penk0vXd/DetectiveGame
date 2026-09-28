@@ -1,0 +1,8 @@
+---
+description: Canonical DetectiveGame design, Unity и documentation правила
+alwaysApply: true
+---
+
+Прочети `AGENTS.md` и го следвай като canonical repository instruction. Използвай `docs/00_INDEX.md` за task-specific context. Product decisions са в `docs/foundation/DECISIONS.md`, нерешените избори — в `docs/foundation/OPEN_QUESTIONS.md`, а implementation truth се проверява в текущото repository.
+
+Не превръщай тихо `PROPOSED` или `OPEN QUESTION` в `DECIDED`. Пази принципа, че играта предоставя информация, а играчът прави дедукцията. Не редактирай генерирания `DetectiveGameInput.cs`, не добавяй speculative architecture и не презаписвай несвързани промени.

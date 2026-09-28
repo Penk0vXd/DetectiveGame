@@ -167,5 +167,13 @@ Packages/packages-lock.json linguist-generated
 # Spine export file for Unity
 *.skel.bytes            lfs
 
+# Bundled TextMesh Pro assets in this prototype are all small (under 1 MB).
+# Store them directly in Git so a Git LFS quota cannot block cloning/pushing.
+Assets/TextMesh?Pro/**/*.ttf  -filter -diff -merge -text
+Assets/TextMesh?Pro/**/*.TTF  -filter -diff -merge -text
+Assets/TextMesh?Pro/**/*.png  -filter -diff -merge -text
+Assets/TextMesh?Pro/**/*.psd  -filter -diff -merge -text
+Assets/TextMesh?Pro/**/*.jpg  -filter -diff -merge -text
+
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
