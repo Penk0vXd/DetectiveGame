@@ -13,6 +13,11 @@ public class ComputerUIController : MonoBehaviour
     [Header("Desktop Applications")]
     [SerializeField] private EmailUIController emailUIController = null;
     [SerializeField] private CaseFilesUIController caseFilesUIController = null;
+    [SerializeField] private PoliceDatabaseUIController policeDatabaseUIController = null;
+    [SerializeField] private PhotosUIController photosUIController = null;
+    [SerializeField] private ForensicsUIController forensicsUIController = null;
+
+    [Header("Legacy Placeholder Windows")]
     [SerializeField] private GameObject databaseWindow = null;
     [SerializeField] private GameObject photosWindow = null;
     [SerializeField] private GameObject forensicsWindow = null;
@@ -171,34 +176,97 @@ public class ComputerUIController : MonoBehaviour
 
     public void OpenDatabase()
     {
-        OpenDesktopApplication(databaseWindow);
+        if (!CanOpenDesktopApplication())
+        {
+            return;
+        }
+
+        CloseAllDesktopApplications();
+
+        if (policeDatabaseUIController != null)
+        {
+            policeDatabaseUIController.OpenDatabase();
+        }
+        else
+        {
+            SetActive(databaseWindow, true);
+        }
+
+        HidePowerMenu();
     }
 
     public void CloseDatabase()
     {
         // затваря приложението
+        if (policeDatabaseUIController != null)
+        {
+            policeDatabaseUIController.CloseDatabase();
+        }
+
         SetActive(databaseWindow, false);
     }
 
     public void OpenPhotos()
     {
-        OpenDesktopApplication(photosWindow);
+        if (!CanOpenDesktopApplication())
+        {
+            return;
+        }
+
+        CloseAllDesktopApplications();
+
+        if (photosUIController != null)
+        {
+            photosUIController.OpenPhotos();
+        }
+        else
+        {
+            SetActive(photosWindow, true);
+        }
+
+        HidePowerMenu();
     }
 
     public void ClosePhotos()
     {
         // затваря приложението
+        if (photosUIController != null)
+        {
+            photosUIController.ClosePhotos();
+        }
+
         SetActive(photosWindow, false);
     }
 
     public void OpenForensics()
     {
-        OpenDesktopApplication(forensicsWindow);
+        if (!CanOpenDesktopApplication())
+        {
+            return;
+        }
+
+        CloseAllDesktopApplications();
+
+        if (forensicsUIController != null)
+        {
+            forensicsUIController.OpenForensics();
+        }
+        else
+        {
+            SetActive(forensicsWindow, true);
+        }
+
+        HidePowerMenu();
     }
 
     public void CloseForensics()
     {
         // затваря приложението
+        if (forensicsUIController != null)
+        {
+            forensicsUIController.CloseForensics();
+        }
+
         SetActive(forensicsWindow, false);
     }
 
@@ -237,21 +305,6 @@ public class ComputerUIController : MonoBehaviour
     private bool CanOpenDesktopApplication()
     {
         return IsOpen && desktopPanel != null && desktopPanel.activeSelf;
-    }
-
-    private void OpenDesktopApplication(GameObject applicationWindow)
-    {
-        if (!CanOpenDesktopApplication() || applicationWindow == null)
-        {
-            return;
-        }
-
-        // затваря другите прозорци
-        CloseAllDesktopApplications();
-
-        // отваря приложението
-        applicationWindow.SetActive(true);
-        HidePowerMenu();
     }
 
     private static void SetActive(GameObject target, bool isActive)

@@ -1,6 +1,6 @@
 # Detective Office Prototype — acceptance tests
 
-**Status:** `PROPOSED` test contract; резултатите още не са записани.
+**Status:** `PROPOSED` runtime test contract; Editor setup evidence е записано, Play Mode резултатите още не са записани.
 
 ## Evidence labels
 
@@ -22,13 +22,14 @@
 | OF-005 | Exit от desktop/nested app | UI close, cursor lock/hide, restored movement/interaction | RUNTIME |
 | OF-006 | Sleep/wake/restart/shutdown | Coherent states и working re-entry | RUNTIME |
 | OF-007 | Email entries | Correct sender/subject/date/body | RUNTIME |
-| OF-008 | Case entries | Correct details; tabs не чупят window | RUNTIME |
-| OF-009 | Placeholder apps | Само selected app е active и може да се затвори | RUNTIME |
+| OF-008 | Case entries | Correct Overview, People и Records data; tabs не чупят window и selection | RUNTIME |
+| OF-009 | Database, Photos, Forensics | Correct search/list/selection/details; само selected app е active и може да се затвори | RUNTIME |
 | OF-010 | Phone call flow | Correct panels и restored world control | RUNTIME |
 | OF-011 | Всички board cards | Correct detail/back/exit | RUNTIME |
 | OF-012 | Document inspection | Връща original transform и movement | RUNTIME |
 | OF-013 | Rapid repeated input | Няма duplicate mode, stuck cursor или disabled controls | RUNTIME |
 | OF-014 | Console след full flow | Няма unexpected exceptions/missing references | RUNTIME |
+| OF-015 | Computer UI при 1920×1080 и по-малък прозорец | `Police Desk 98` стилът остава четим; title bars, buttons, lists и long text не се застъпват | RUNTIME |
 
 ## Experience tests
 
@@ -43,6 +44,14 @@
 | UX-007 | Няма pixel hunting или excessive highlighting | Missed objects или visual clutter |
 
 ## Completion record
+
+Editor setup evidence на 2026-09-29:
+
+- Unity `6000.6.3f1` batch execution на `ComputerUISetupTool.BuildComputerUI` завърши с exit code `0`.
+- Tool validation потвърди required Computer UI objects и петте нови entry prefabs.
+- Повторният batch run приложи `Police Desk 98` palette, square outlines, beveled controls и локалния `PoliceTerminal SDF` font asset без compile warnings или errors.
+- Serialized inspection потвърди non-null references за новите controllers и точно по един persistent listener за всеки documented button method.
+- Това не е evidence за `OF-001`–`OF-014`; те остават pending до наблюдаван Play Mode run.
 
 ```text
 Date:

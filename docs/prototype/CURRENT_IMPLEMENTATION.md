@@ -1,7 +1,7 @@
 # Текуща implementation снимка
 
 **Status:** `IMPLEMENTED` snapshot, не design approval.  
-**Repository inspected:** 2026-09-28.  
+**Repository inspected:** 2026-09-29.
 **Evidence:** static inspection; runtime не се твърди без изрично отбелязване.
 
 ## Project baseline
@@ -14,7 +14,7 @@
 - Active build scene: `Assets/_Game/Scenes/DetectiveOffice.unity`.
 - Build settings съдържа disabled stale reference към изтрития `Assets/Scenes/SampleScene.unity`.
 - Gameplay code: `Assets/_Game/Scripts/`.
-- 20 authored C# files, приблизително 1900 реда към датата на проверката.
+- 33 authored C# files, приблизително 2526 реда към датата на проверката.
 - Няма namespaces или assembly definitions; кодът е в `Assembly-CSharp`.
 - Working tree съдържа значителни user changes спрямо initial commit; те трябва да се пазят.
 
@@ -64,13 +64,22 @@ Power states: `Off`, `Booting`, `On`, `Sleeping`. Има boot, wake, sleep, rest
 - `CaseData`, `CaseEntryUI`, `CaseFilesUIController` са implemented.
 - За разлика от стария `PROJECT_OVERVIEW.md`, текущата сцена вече wire-ва controller, window, content и prefab.
 - Има два placeholder cases: open homicide и archived warehouse fire.
-- Overview/People/Records panel switching е implemented; content depth е placeholder.
+- Overview/People/Records panel switching е implemented.
+- `CaseData` вече съдържа nested `CasePersonData` и `CaseRecordData` lists.
+- Generated People/Records entries, typed selection callbacks и details presentation са implemented в C#.
+- People/Records list/detail hierarchy, references, test data и entry prefabs са scene-wired чрез Unity Editor API.
 
 ### Database, Photos, Forensics
 
 - Има icons, windows, content objects и close controls.
 - `ComputerUIController` ги отваря/затваря.
-- Нямат substantive domain behavior или scalable data model.
+- `PoliceDatabaseUIController` има case-insensitive `FullName` search, generated results, no-result/empty-query state, clear и details; data е `List<DatabasePersonData>`.
+- `PhotosUIController` има generated photo list, Sprite preview и metadata; data е `List<PhotoData>`.
+- `ForensicsUIController` има generated reports list, selection и details; data е `List<ForensicsReportData>`.
+- Трите controllers, data lists, entry prefabs, application windows и `OnClick` bindings са scene-wired.
+- `ComputerUIController` пази legacy window references към същите functional windows като backward-compatible fallback.
+- Computer UI използва `Police Desk 98` styling: teal desktop, classic gray square windows, navy title bars, hard borders, beveled buttons и големи uppercase labels с локален TMP font asset.
+- Exact hierarchy, layout, Inspector, test-data и test инструкции: `../gameplay/COMPUTER_SETUP_GUIDE.md`.
 
 ## Phone
 
@@ -93,7 +102,7 @@ Power states: `Off`, `Booting`, `On`, `Sleeping`. Има boot, wake, sleep, rest
 - Един office scene с primitive placeholder geometry.
 - Player/Main Camera, EventSystem, Environment, Furniture, Computer, Phone, EvidenceBoard, Document_Test, TestInteractable и Canvas UI.
 - `Art`, `Audio`, `Data` и `UI` съдържат малко или никакво final authored content.
-- Email и case row prefabs са в `Assets/_Game/Prefabs/Computer`.
+- Всичките седем Computer row prefabs са в `Assets/_Game/Prefabs/Computer`.
 
 ## Not implemented
 
@@ -110,9 +119,9 @@ Power states: `Off`, `Booting`, `On`, `Sleeping`. Има boot, wake, sleep, rest
 
 ## Verification required
 
-- Unity `6000.6.3f1`: zero compile errors.
+- Unity `6000.6.3f1` compilation: `VALIDATED` на 2026-09-29 чрез `Assembly-CSharp` build — 0 errors, 0 warnings.
+- Unity Editor reimport/scene serialization: `VALIDATED` чрез Unity `-executeMethod ComputerUISetupTool.BuildComputerUI`; tool validation завърши успешно и batch process върна code `0`.
 - Play Mode: всички P0 checks от `ACCEPTANCE_TESTS.md`.
 - Console inspection по време на mode transitions.
 - UI readability при target Windows resolution.
 - Human playtest преди experience validation.
-

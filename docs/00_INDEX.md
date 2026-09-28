@@ -1,7 +1,7 @@
 # Индекс на документацията на DetectiveGame
 
 **Предназначение:** canonical router за AI агенти и хора.  
-**Последна проверка:** 2026-09-28.
+**Последна проверка:** 2026-09-29.
 
 ## Бърза навигация
 
@@ -11,7 +11,7 @@
 | Разбиране на играта | `foundation/GAME_VISION.md`, `foundation/SCOPE_AND_NON_GOALS.md`, `gameplay/CORE_GAMEPLAY_LOOP.md` |
 | Office Prototype | `prototype/OFFICE_PROTOTYPE.md`, `prototype/CURRENT_IMPLEMENTATION.md`, `prototype/ACCEPTANCE_TESTS.md` |
 | Player interaction/control | `gameplay/PLAYER_INTERACTION.md`, `technical/ARCHITECTURE.md`, `technical/TESTING.md` |
-| Computer | `gameplay/COMPUTER_SYSTEM.md`, `prototype/CURRENT_IMPLEMENTATION.md` |
+| Computer | `gameplay/COMPUTER_SYSTEM.md`, `gameplay/COMPUTER_SETUP_GUIDE.md`, `prototype/CURRENT_IMPLEMENTATION.md` |
 | Phone/dialogue | `gameplay/PHONE_AND_DIALOGUE.md` |
 | Evidence/board | `gameplay/EVIDENCE_AND_STATEMENTS.md`, `gameplay/BOARD_TIMELINE_DEDUCTION.md` |
 | Crime scenes | `gameplay/CRIME_SCENE_AND_INSPECTION.md` |
@@ -43,6 +43,7 @@
 - `gameplay/PLAYER_INTERACTION.md`
 - `gameplay/DETECTIVE_OFFICE.md`
 - `gameplay/COMPUTER_SYSTEM.md`
+- `gameplay/COMPUTER_SETUP_GUIDE.md` — exact Unity Editor hierarchy, prefabs, Inspector wiring, layout и test checklist за Computer applications.
 - `gameplay/PHONE_AND_DIALOGUE.md`
 - `gameplay/EVIDENCE_AND_STATEMENTS.md`
 - `gameplay/BOARD_TIMELINE_DEDUCTION.md`
@@ -93,4 +94,3 @@
 - **DEFERRED:** умишлено за по-късно.
 - **REJECTED:** изрично изключено.
 - **REVISIT:** отново отворено решение.
-
