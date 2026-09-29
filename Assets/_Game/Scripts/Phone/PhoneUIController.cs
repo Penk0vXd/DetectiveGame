@@ -12,8 +12,8 @@ public class PhoneUIController : MonoBehaviour
     [Header("Contact Content")]
     [SerializeField] private TMP_Text contactNameText;
     [SerializeField] private TMP_Text dialogueText;
-    [SerializeField] private string contactName = string.Empty;
-    [SerializeField, TextArea(3, 8)] private string dialogue = string.Empty;
+    [SerializeField] private string contactName = "Полицай Милър";
+    [SerializeField, TextArea(3, 8)] private string dialogue = "В кухнята намерихме бележка от паркинг. Отпечатаният час е 22:41.";
 
     public bool IsOpen { get; private set; }
 

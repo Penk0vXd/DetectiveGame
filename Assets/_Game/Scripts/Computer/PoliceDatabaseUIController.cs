@@ -70,7 +70,7 @@ public sealed class PoliceDatabaseUIController : MonoBehaviour
 
         if (query.Length == 0)
         {
-            SetText(resultsStatusText, "Enter a full name");
+            SetText(resultsStatusText, "Въведете пълно име");
             return;
         }
 
@@ -93,7 +93,7 @@ public sealed class PoliceDatabaseUIController : MonoBehaviour
             }
         }
 
-        SetText(resultsStatusText, resultCount == 0 ? "No records found" : $"Records found: {resultCount}");
+        SetText(resultsStatusText, resultCount == 0 ? "Няма намерени записи" : $"Намерени записи: {resultCount}");
     }
 
     public void ClearSearch()

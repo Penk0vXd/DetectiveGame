@@ -104,7 +104,6 @@ Evidence трябва да съответства на claim-а: static inspecti
 
 ### Output contract
 
-Комуникирай основно на български. Оставяй file names, code/API identifiers, standard technical terms и status labels на английски. При repository change докладвай: active role, status, files changed, behavior/design change, verification, unverified items, open questions и docs updated.
+Комуникирай основно на български. По `D-019` цялото player-facing game content е на български. Оставяй file names, code/API identifiers, stable record IDs, standard technical terms и status labels на английски. При repository change докладвай: active role, status, files changed, behavior/design change, verification, unverified items, open questions и docs updated.
 
 ---
-

@@ -25,7 +25,7 @@ Detective Office Prototype. Целта е да валидира пребивав
 - Full forensic simulation.
 - Open-world travel, procedural city/cases или multiplayer.
 - Production save architecture.
-- Final art/audio/UI/localization/optimization.
+- Final art/audio/UI polish, multi-language localization framework и optimization. Българският player-facing език е `DECIDED` по `D-019` и не е deferred.
 - General-purpose frameworks за хипотетични системи.
 
 ## Проверка за всеки feature
@@ -37,4 +37,3 @@ Detective Office Prototype. Целта е да валидира пребивав
 5. Нужен ли е сега, или само би бил съвместим с бъдещата игра?
 
 Без ясен отговор на първия въпрос feature-ът се отлага.
-

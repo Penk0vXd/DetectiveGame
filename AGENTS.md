@@ -34,6 +34,7 @@
 ## Език
 
 - Основният език за документация и комуникация е български.
+- По `D-019` цялото player-facing game content е на български: UI, menus, dialogue, subtitles, documents, emails, case records и interaction feedback.
 - Оставяй на английски имена на файлове, C#/Unity identifiers, API имена и утвърдени технически термини, когато преводът би създал неяснота.
 - Статусите `IMPLEMENTED`, `DECIDED`, `VALIDATED`, `PROPOSED`, `OPEN QUESTION`, `NEEDS RESEARCH`, `DEFERRED`, `REJECTED` и `REVISIT` остават на английски и се използват точно.
 
@@ -197,4 +198,3 @@
 - Gemini: `GEMINI.md`, след това `AGENTS.md`.
 - Други модели: `AI_CONTEXT.md`, след това `AGENTS.md`.
 - `CODEX.md` е кратък human-visible adapter; `AGENTS.md` остава authoritative.
-

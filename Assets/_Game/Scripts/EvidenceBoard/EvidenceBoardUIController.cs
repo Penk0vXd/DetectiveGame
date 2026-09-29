@@ -32,9 +32,9 @@ public class EvidenceBoardUIController : MonoBehaviour
     [Header("Evidence Cards")]
     [SerializeField] private EvidenceCardData[] evidenceCards =
     {
-        new EvidenceCardData("Victim Photo", "Photo taken at the crime scene"),
-        new EvidenceCardData("Parking Receipt", "Receipt timestamp 22 41"),
-        new EvidenceCardData("Witness Statement", "Witness claims the suspect was home")
+        new EvidenceCardData("Снимка на жертвата", "Снимка, направена на местопрестъплението"),
+        new EvidenceCardData("Бележка от паркинг", "Отпечатаният час върху бележката е 22:41"),
+        new EvidenceCardData("Свидетелски показания", "Свидетелят твърди, че лицето е било вкъщи")
     };
 
     private bool isInitialized;

@@ -44,9 +44,7 @@ AI може да анализира варианти, но не трябва т�
 - Lighting, weather, grain и post-processing rules.
 - Визуална прогресия на офиса.
 - Achievements и extras.
-- Localization и language strategy.
 
 ## Resolution protocol
 
 При решение: добави го в `DECISIONS.md`, актуализирай/затвори въпроса, промени засегнатите system docs и не използвай `VALIDATED` без test evidence.
-

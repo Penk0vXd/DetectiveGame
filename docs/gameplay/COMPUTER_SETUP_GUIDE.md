@@ -7,6 +7,8 @@
 
 Това е точната инструкция за изграждане на Police Department Workstation UI върху наличния Computer shell. Данните са serialized Inspector data; няма SQL, networking, automatic deductions или generic OS framework. Desktop остава background и `ComputerUIController` гарантира, че само един основен application window е отворен.
 
+По `D-019` всички видими за играча Computer labels, buttons, emails, case records, database records, photo metadata и forensic reports са на български. GameObject names, C# identifiers, Inspector field names и служебни record IDs остават на английски. `PoliceTerminal SDF` използва dynamic Cyrillic fallback; не заменяй font setup-а с asset без кирилица.
+
 Не редактирай `Assets/_Game/Scenes/DetectiveOffice.unity` като текст. Hierarchy-то и wiring-ът са генерирани чрез Unity Editor API от `Assets/_Game/Editor/ComputerUISetupTool.cs`. Инструментът може да се изпълни повторно от `Tools > DetectiveGame > Build Computer UI`; той rebuild-ва Computer UI subtree и запазва сцената. Всички имена по-долу са exact names, използвани от tool-а.
 
 ## 1. File map
@@ -1059,8 +1061,8 @@ Long email body и full forensic report използват отделните `E
 
 ### Mail — 3 emails
 
-1. Sender: `Forensics Department`; Subject: `Preliminary Examination Report`; Date: `14/10/2011 09:32`; Body: `The preliminary examination has been completed. Additional findings will follow.`
-2. Sender: `Officer Miller`; Subject: `Apartment Search`; Date: `14/10/2011 10:05`; Body: `A parking receipt was recovered from the kitchen. The printed time is 22:41.`
+1. Подател: `Отдел Криминалистика`; Тема: `Предварителен доклад от огледа`; Дата: `14/10/2011 09:32`; Текст: `Предварителният оглед е завършен. Допълнителните резултати ще бъдат изпратени по-късно.`
+2. Подател: `Полицай Милър`; Тема: `Претърсване на апартамента`; Дата: `14/10/2011 10:05`; Текст: `В кухнята намерихме бележка от паркинг. Отпечатаният час е 22:41.`
 3. Sender: `Records Office`; Subject: `Case File Update`; Date: `14/10/2011 10:18`; Body: `The witness contact sheet has been added to CASE-0017.`
 
 ### Case Files — 2 cases
@@ -1068,33 +1070,33 @@ Long email body и full forensic report използват отделните `E
 Case 1:
 
 - Case Number: `CASE-0017`
-- Case Name: `Riverside Apartment Homicide`
-- Status: `OPEN`
-- Date Opened: `14 October 2011`
-- Location: `17 Riverside Avenue`
-- Victim: `Daniel Harris`
-- Lead Detective: `Michael Carter`
-- Summary: `The victim was discovered inside his apartment at approximately 23:20. The investigation remains active.`
+- Case Name: `Убийство в апартамент на бул. „Ривърсайд“`
+- Status: `ОТВОРЕНО`
+- Date Opened: `14 октомври 2011`
+- Location: `бул. „Ривърсайд“ 17`
+- Victim: `Даниел Харис`
+- Lead Detective: `Майкъл Картър`
+- Summary: `Жертвата е открита мъртва в апартамента си около 23:20. Разследването продължава.`
 - People:
-  - Name `Daniel Harris`; Role `Victim`; Short Description `Resident of the apartment where the incident was reported.`
-  - Name `Elena Moore`; Role `Witness`; Short Description `Neighbour who reported hearing activity in the corridor.`
-  - Name `Thomas Reed`; Role `Person of Interest`; Short Description `Known associate listed in the initial incident report.`
-  - Name `Officer Miller`; Role `Officer`; Short Description `Responding officer who documented the apartment search.`
+  - Name `Даниел Харис`; Role `Жертва`; Short Description `Обитател на апартамента, в който е подаден сигналът.`
+  - Name `Елена Мур`; Role `Свидетел`; Short Description `Съседка, която съобщава, че е чула движение в коридора.`
+  - Name `Томас Рийд`; Role `Лице от интерес`; Short Description `Познат на жертвата, посочен в първоначалния доклад.`
+  - Name `Полицай Милър`; Role `Полицай`; Short Description `Служителят, който е описал претърсването на апартамента.`
 - Records:
-  - Title `Initial Incident Report`; Record Type `Incident Report`; Date `14/10/2011`; Body `Officers responded to a call at 23:20 and secured the apartment.`
-  - Title `Witness Statement — Elena Moore`; Record Type `Witness Statement`; Date `14/10/2011`; Body `The witness reports corridor noise but does not identify its source.`
-  - Title `Autopsy Request`; Record Type `Autopsy Request`; Date `14/10/2011`; Body `A formal examination was requested. Findings are pending.`
+  - Title `Първоначален доклад за инцидента`; Record Type `Доклад за инцидент`; Date `14/10/2011`; Body `Служителите са се отзовали на сигнал в 23:20 и са обезопасили апартамента.`
+  - Title `Свидетелски показания — Елена Мур`; Record Type `Свидетелски показания`; Date `14/10/2011`; Body `Свидетелката съобщава за шум в коридора, но не посочва източника му.`
+  - Title `Искане за аутопсия`; Record Type `Искане за аутопсия`; Date `14/10/2011`; Body `Поискан е официален медицински преглед. Резултатите се очакват.`
 
 Case 2:
 
 - Case Number: `CASE-0012`
-- Case Name: `Warehouse Fire Investigation`
-- Status: `ARCHIVED`
-- Date Opened: `03 October 2011`
-- Location: `North Industrial District`
-- Victim: `None`
-- Lead Detective: `Sarah Bennett`
-- Summary: `The initial investigation found no confirmed evidence of foul play. The case is archived.`
+- Case Name: `Разследване на пожар в склад`
+- Status: `АРХИВИРАНО`
+- Date Opened: `3 октомври 2011`
+- Location: `Северна промишлена зона`
+- Victim: `Няма`
+- Lead Detective: `Сара Бенет`
+- Summary: `Първоначалното разследване не открива потвърдени данни за умишлено деяние. Делото е архивирано.`
 - People: Name `Sarah Bennett`; Role `Officer`; Short Description `Lead detective named in the archived file.`
 - Records:
   - Title `Fire Marshal Summary`; Record Type `Official Report`; Date `05/10/2011`; Body `The available observations did not establish deliberate ignition.`
@@ -1102,22 +1104,22 @@ Case 2:
 
 ### Police Database — 3 records
 
-1. Full Name `Thomas Reed`; Date Of Birth `22/03/1979`; Address `42 Westbridge Road`; Occupation `Delivery Driver`; Record Summary `Identity and address verified. One prior traffic citation. No conclusion about the active case.`
-2. Full Name `Elena Moore`; Date Of Birth `08/11/1984`; Address `19 Riverside Avenue`; Occupation `Accountant`; Record Summary `Current address verified. No criminal record listed.`
-3. Full Name `Daniel Harris`; Date Of Birth `17/06/1975`; Address `17 Riverside Avenue`; Occupation `Architect`; Record Summary `Identity record associated with CASE-0017.`
+1. Full Name `Томас Рийд`; Date Of Birth `22/03/1979`; Address `ул. „Уестбридж“ 42`; Occupation `Шофьор-доставчик`; Record Summary `Самоличността и адресът са потвърдени. Има едно предишно нарушение на пътя. Записът не съдържа заключение за активното дело.`
+2. Full Name `Елена Мур`; Date Of Birth `08/11/1984`; Address `бул. „Ривърсайд“ 19`; Occupation `Счетоводител`; Record Summary `Настоящият адрес е потвърден. Няма посочени криминални регистрации.`
+3. Full Name `Даниел Харис`; Date Of Birth `17/06/1975`; Address `бул. „Ривърсайд“ 17`; Occupation `Архитект`; Record Summary `Записът за самоличност е свързан с CASE-0017.`
 
-Test searches: `thomas`, `THOMAS`, `Reed` трябва да намерят Thomas Reed; `Nobody` трябва да покаже точно `No records found`; празна заявка трябва да покаже `Enter a full name`.
+Test searches: `томас`, `ТОМАС`, `Рийд` трябва да намерят Томас Рийд; `Несъществуващ` трябва да покаже точно `Няма намерени записи`; празна заявка трябва да покаже `Въведете пълно име`.
 
 ### Photos — 3 photos
 
-1. Title `Apartment Entrance`; Date `14/10/2011 23:38`; Location `17 Riverside Avenue`; Description `Exterior view of the apartment entrance after the scene was secured.`; Image: assign a development Sprite.
-2. Title `Kitchen Table`; Date `14/10/2011 23:52`; Location `Apartment Kitchen`; Description `Overview photograph of the table and nearby surfaces.`; Image: assign a development Sprite.
-3. Title `Parking Receipt`; Date `15/10/2011 00:06`; Location `Apartment Kitchen`; Description `Close photograph of the recovered receipt. The photograph records appearance only.`; Image: assign a development Sprite.
+1. Title `Входът на апартамента`; Date `14/10/2011 23:38`; Location `бул. „Ривърсайд“ 17`; Description `Външен изглед на входа, след като мястото е обезопасено.`; Image: assign a development Sprite.
+2. Title `Кухненската маса`; Date `14/10/2011 23:52`; Location `Кухнята на апартамента`; Description `Обща снимка на масата и близките повърхности.`; Image: assign a development Sprite.
+3. Title `Бележка от паркинг`; Date `15/10/2011 00:06`; Location `Кухнята на апартамента`; Description `Близък кадър на намерената бележка. Снимката документира само външния ѝ вид.`; Image: assign a development Sprite.
 
 ### Forensics — 2 reports
 
-1. Report Number `FR-2011-184`; Title `Preliminary Examination`; Status `Completed`; Date `14/10/2011`; Related Case `CASE-0017`; Summary `Preliminary observations are available.`; Full Report `The report records qualified preliminary observations. Additional laboratory work may change or refine the findings.`
-2. Report Number `FR-2011-191`; Title `Trace Material Analysis`; Status `Pending`; Date `15/10/2011`; Related Case `CASE-0017`; Summary `Samples received by the laboratory.`; Full Report `Analysis is pending. No result or interpretation is available at this time.`
+1. Report Number `FR-2011-184`; Title `Предварителен оглед`; Status `ЗАВЪРШЕН`; Date `14/10/2011`; Related Case `CASE-0017`; Summary `Налични са предварителни наблюдения.`; Full Report `Докладът съдържа квалифицирани предварителни наблюдения. Допълнителната лабораторна работа може да промени или уточни резултатите.`
+2. Report Number `FR-2011-191`; Title `Анализ на следови материали`; Status `ИЗЧАКВА`; Date `15/10/2011`; Related Case `CASE-0017`; Summary `Пробите са получени в лабораторията.`; Full Report `Анализът предстои. Към този момент няма наличен резултат или интерпретация.`
 
 ## 14. Full test checklist
 
@@ -1156,7 +1158,7 @@ Test searches: `thomas`, `THOMAS`, `Reed` трябва да намерят Thoma
 
 - [ ] `thomas`, `THOMAS` и `Reed` дават Thomas Reed.
 - [ ] Result selection показва всички пет fields.
-- [ ] `Nobody` показва `No records found` и празни details.
+- [ ] `Несъществуващ` показва `Няма намерени записи` и празни details.
 - [ ] Празна заявка показва `Enter a full name`.
 - [ ] `Clear` изчиства input, generated results, status и details.
 - [ ] Repeated Search не дублира results.
@@ -1174,7 +1176,7 @@ Test searches: `thomas`, `THOMAS`, `Reed` трябва да намерят Thoma
 
 - [ ] Точно 2 reports се появяват без duplication.
 - [ ] Report selection показва Number, Title, Status, Date, Related Case, Summary и Full Report.
-- [ ] `Pending` е само official status и не стартира timer.
+- [ ] `ИЗЧАКВА` е само official status и не стартира timer.
 - [ ] Close връща Desktop.
 
 ### Exclusive app switching

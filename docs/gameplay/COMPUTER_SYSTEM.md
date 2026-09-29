@@ -68,7 +68,7 @@ Computer е diegetic investigation tool за получаване, търсен�
 - Missing window/list/prefab references прекратяват операцията с еднократен warning, вместо да причинят `NullReferenceException`.
 - Null data elements се пропускат.
 - Static lists се build-ват веднъж; Case People/Records и Database results изчистват старите generated entries преди rebuild.
-- Database empty query показва `Enter a full name`; zero matches показва `No records found`.
+- Database empty query показва `Въведете пълно име`; zero matches показва `Няма намерени записи`.
 - Missing Photo Sprite е допустим и скрива само Image component-а; metadata остава usable.
 
 ## Verification
@@ -76,6 +76,7 @@ Computer е diegetic investigation tool за получаване, търсен�
 - `STATIC/COMPILATION` на 2026-09-29: `Assembly-CSharp` build с Unity `6000.6.3f1` references — 0 errors, 0 warnings.
 - `EDITOR` на 2026-09-29: Unity batch setup създаде hierarchy, петте липсващи prefabs, test data, non-null controller references и точно по един persistent listener за всеки documented button; tool validation завърши успешно.
 - `EDITOR VISUAL` на 2026-09-29: повторно изпълнение на setup tool-а приложи `Police Desk 98` styling и създаде локалния `PoliceTerminal SDF` font asset; batch process завърши с code `0`.
+- `EDITOR LANGUAGE` на 2026-09-29: Computer labels и development records са на български; `PoliceTerminal SDF` е свързан с dynamic Cyrillic fallback; batch compilation завърши с 0 errors и 0 warnings.
 - `RUNTIME`: pending Play Mode проверка по `COMPUTER_SETUP_GUIDE.md`.
 - Required runtime flows: `docs/prototype/ACCEPTANCE_TESTS.md` и full checklist в setup guide-а.
 

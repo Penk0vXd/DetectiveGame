@@ -30,6 +30,7 @@
 | OF-013 | Rapid repeated input | Няма duplicate mode, stuck cursor или disabled controls | RUNTIME |
 | OF-014 | Console след full flow | Няма unexpected exceptions/missing references | RUNTIME |
 | OF-015 | Computer UI при 1920×1080 и по-малък прозорец | `Police Desk 98` стилът остава четим; title bars, buttons, lists и long text не се застъпват | RUNTIME |
+| OF-016 | Пълен Office flow | Няма английски player-facing placeholder text, missing кирилица или квадратчета в Computer, Phone, Board и Document UI | RUNTIME |
 
 ## Experience tests
 
@@ -50,8 +51,9 @@ Editor setup evidence на 2026-09-29:
 - Unity `6000.6.3f1` batch execution на `ComputerUISetupTool.BuildComputerUI` завърши с exit code `0`.
 - Tool validation потвърди required Computer UI objects и петте нови entry prefabs.
 - Повторният batch run приложи `Police Desk 98` palette, square outlines, beveled controls и локалния `PoliceTerminal SDF` font asset без compile warnings или errors.
+- Българският pass преведе scene labels и serialized placeholder content за Computer, Phone и Evidence Board; добавеният dynamic Cyrillic fallback е scene-wired и batch compilation завърши с 0 errors и 0 warnings.
 - Serialized inspection потвърди non-null references за новите controllers и точно по един persistent listener за всеки documented button method.
-- Това не е evidence за `OF-001`–`OF-014`; те остават pending до наблюдаван Play Mode run.
+- Това не е evidence за `OF-001`–`OF-016`; те остават pending до наблюдаван Play Mode run.
 
 ```text
 Date:

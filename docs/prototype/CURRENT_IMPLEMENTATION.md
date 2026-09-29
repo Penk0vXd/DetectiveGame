@@ -17,6 +17,7 @@
 - 33 authored C# files, приблизително 2526 реда към датата на проверката.
 - Няма namespaces или assembly definitions; кодът е в `Assembly-CSharp`.
 - Working tree съдържа значителни user changes спрямо initial commit; те трябва да се пазят.
+- Player-facing езикът е български по `D-019`. Текущите Computer, Phone и Evidence Board labels и placeholder content са преведени; technical object/field names остават на английски.
 
 ## Implemented input
 
@@ -79,6 +80,7 @@ Power states: `Off`, `Booting`, `On`, `Sleeping`. Има boot, wake, sleep, rest
 - Трите controllers, data lists, entry prefabs, application windows и `OnClick` bindings са scene-wired.
 - `ComputerUIController` пази legacy window references към същите functional windows като backward-compatible fallback.
 - Computer UI използва `Police Desk 98` styling: teal desktop, classic gray square windows, navy title bars, hard borders, beveled buttons и големи uppercase labels с локален TMP font asset.
+- `PoliceTerminal SDF` има dynamic Cyrillic fallback, за да показва българския текст без missing glyphs.
 - Exact hierarchy, layout, Inspector, test-data и test инструкции: `../gameplay/COMPUTER_SETUP_GUIDE.md`.
 
 ## Phone
@@ -121,6 +123,7 @@ Power states: `Off`, `Booting`, `On`, `Sleeping`. Има boot, wake, sleep, rest
 
 - Unity `6000.6.3f1` compilation: `VALIDATED` на 2026-09-29 чрез `Assembly-CSharp` build — 0 errors, 0 warnings.
 - Unity Editor reimport/scene serialization: `VALIDATED` чрез Unity `-executeMethod ComputerUISetupTool.BuildComputerUI`; tool validation завърши успешно и batch process върна code `0`.
+- Български Editor pass: `VALIDATED` на 2026-09-29 за serialized scene content, Computer labels и Cyrillic font wiring; Unity batch process върна code `0`, 0 compile errors и 0 warnings.
 - Play Mode: всички P0 checks от `ACCEPTANCE_TESTS.md`.
 - Console inspection по време на mode transitions.
 - UI readability при target Windows resolution.

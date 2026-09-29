@@ -24,6 +24,7 @@
 | D-016 | Multiplayer/networking не е текущ приоритет | Избягва нерелевантна complexity | DECIDED |
 | D-017 | Проектът е и C#/Unity learning vehicle | Потребителят трябва да разбира и създава системите | DECIDED |
 | D-018 | Dark atmospheric stylized/semi-realistic direction, не AAA photorealism | Mood и реалистичен scope | DECIDED на direction ниво |
+| D-019 | Цялата player-facing игра е на български | Единен език за UI, menus, dialogue, documents, case content, subtitles и interaction feedback | DECIDED; code identifiers, filenames, record IDs и утвърдени technical terms могат да останат на английски |
 
 ## Template
 
@@ -38,4 +39,3 @@ Status: PROPOSED / DECIDED / VALIDATED / REJECTED / REVISIT
 Owner/approver:
 Related documents:
 ```
-

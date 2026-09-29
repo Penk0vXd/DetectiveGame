@@ -10,6 +10,10 @@ Cases да могат да се author-ват, review-ват, validate-ват и
 
 Case metadata, persons/relationships, locations, canonical timeline, sources, statements, observations, discovery conditions, optional evidence/red herrings, dialogue, formal deductions, consequences и cross-case links.
 
+## Език на съдържанието
+
+По `D-019` authoring-ът на цялото player-facing съдържание е на български. Това включва dialogue, email, case files, database records, forensic reports, photos metadata, evidence labels, documents, subtitles и UI feedback. Proper names се изписват на кирилица за играча. Stable IDs и code-facing keys остават непреведени и не се използват като display text.
+
 ## Workflow direction
 
 1. Define canonical truth.
@@ -35,4 +39,4 @@ ScriptableObjects, JSON, custom editor, spreadsheet или друг format са 
 - Large custom editor преди manual case authoring.
 - Procedural mysteries преди hand-authored validation.
 - AI-generated canon без consistency/fairness review.
-
+- Английски placeholder text в build, представян като готово player-facing съдържание.

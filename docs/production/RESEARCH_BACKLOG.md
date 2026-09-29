@@ -17,7 +17,7 @@
 | P2 | Unity assets/packages | Avoid dependency traps | Само при concrete need | Да |
 | P2 | Steam detective market | Scope/positioning | Production planning | Да |
 | P3 | Voice pipeline/cost | Large content multiplier | Voice decision | Да |
-| P3 | Localization | UI/document/dialogue cost | Production | Да |
+| P3 | Multi-language localization framework | Cost за допълнителни езици след българския canonical player-facing content | Production | Да |
 
 ## Research record
 
@@ -35,4 +35,3 @@ Recheck trigger:
 ```
 
 Research не променя `DECISIONS.md` без user approval.
-
