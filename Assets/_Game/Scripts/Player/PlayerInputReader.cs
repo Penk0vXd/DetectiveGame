@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerInputReader : MonoBehaviour
 {
@@ -59,6 +60,19 @@ public class PlayerInputReader : MonoBehaviour
     {
         EnsureInputReady();
         return input.Player.Interact.WasPressedThisFrame();
+    }
+
+    public bool ReadPause()
+    {
+        EnsureInputReady();
+        return input.Player.Pause.WasPressedThisFrame();
+    }
+
+    public string GetInteractBindingLabel()
+    {
+        EnsureInputReady();
+        // Чете реалния binding, включително бъдещ runtime override.
+        return input.Player.Interact.GetBindingDisplayString();
     }
 
     private void CreateInput()

@@ -10,6 +10,15 @@ public class ComputerInteractable : MonoBehaviour, IInteractable
 
     private bool referencesValid;
     private bool isComputerModeActive;
+    [SerializeField] private string displayName = "Компютър";
+
+    public string DisplayName => displayName;
+    public string ActionLabel => "Използвай";
+    private InteractionModeController ModeController => playerInteraction != null ? playerInteraction.ModeController : null;
+    public bool CanInteract => isActiveAndEnabled && playerController != null
+        && playerInteraction != null && computerUI != null && computerUI.CanOpen
+        && powerController != null && powerController.isActiveAndEnabled && !isComputerModeActive
+        && ModeController != null && ModeController.CanEnter(this);
 
     private void Awake()
     {
@@ -61,7 +70,7 @@ public class ComputerInteractable : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (!referencesValid || isComputerModeActive || computerUI.IsOpen)
+        if (!CanInteract)
         {
             return;
         }
@@ -71,21 +80,17 @@ public class ComputerInteractable : MonoBehaviour, IInteractable
 
     private void OpenComputer()
     {
+        if (!ModeController.TryEnter(this, InteractionModeController.Mode.FocusedUI))
+            return;
+
         if (!computerUI.OpenComputer())
         {
+            ModeController.TryExit(this);
             return;
         }
 
         // отваря компютъра
         isComputerModeActive = true;
-
-        // спира управлението
-        playerController.SetControlEnabled(false);
-        playerInteraction.SetInteractionEnabled(false);
-
-        // показва курсора
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
 
         powerController.EnterComputerMode();
     }
@@ -101,10 +106,6 @@ public class ComputerInteractable : MonoBehaviour, IInteractable
         isComputerModeActive = false;
         computerUI.CloseComputer();
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        playerController.SetControlEnabled(true);
-        playerInteraction.SetInteractionEnabled(true);
+        ModeController?.TryExit(this);
     }
 }

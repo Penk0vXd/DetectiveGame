@@ -16,6 +16,7 @@ public class PhoneUIController : MonoBehaviour
     [SerializeField, TextArea(3, 8)] private string dialogue = "В кухнята намерихме бележка от паркинг. Отпечатаният час е 22:41.";
 
     public bool IsOpen { get; private set; }
+    public bool CanOpen => isActiveAndEnabled && HasRequiredReferences() && !IsOpen;
 
     public event Action ExitRequested;
 
@@ -39,13 +40,23 @@ public class PhoneUIController : MonoBehaviour
             return;
         }
 
-        IsOpen = false;
+        ClosePhone();
+        ExitRequested?.Invoke();
+    }
+
+    private void Update()
+    {
+        if (!IsOpen || phoneRoot == null || phoneRoot.activeInHierarchy)
+            return;
+
+        // Външно скрит UI root освобождава активния инструмент.
+        ClosePhone();
         ExitRequested?.Invoke();
     }
 
     public bool OpenPhone()
     {
-        if (!HasRequiredReferences() || IsOpen)
+        if (!CanOpen)
         {
             return false;
         }

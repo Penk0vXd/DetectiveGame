@@ -10,9 +10,31 @@ public class PlayerInteraction : MonoBehaviour
     private DocumentInteractable inspectedDocument;
     private bool interactionEnabled = true;
 
+    public InteractionModeController ModeController { get; private set; }
+
+    // PROTOTYPE CODE: общ target за действието и interaction HUD.
+    private MonoBehaviour currentTarget;
+
+    public bool IsWorldInteractionActive => isActiveAndEnabled && interactionEnabled
+        && playerCamera != null && inputReader != null && inputReader.isActiveAndEnabled
+        && (inspectedDocument == null || !inspectedDocument.IsInspecting);
+
+    public IInteractable CurrentTarget
+    {
+        get
+        {
+            if (!IsWorldInteractionActive || currentTarget == null || !currentTarget.isActiveAndEnabled)
+                return null;
+
+            IInteractable target = currentTarget as IInteractable;
+            return target != null && target.CanInteract ? target : null;
+        }
+    }
+
     private void Awake()
     {
         inputReader = GetComponent<PlayerInputReader>();
+        ModeController = new InteractionModeController(GetComponent<FirstPersonController>(), this);
 
         // взима камерата
         playerCamera = GetComponentInChildren<Camera>();
@@ -26,44 +48,74 @@ public class PlayerInteraction : MonoBehaviour
 
     private void Update()
     {
-        if (!interactionEnabled)
+        // Старият target не трябва да остава при загуба на focus или управление.
+        currentTarget = null;
+
+        // Disabled document вече е върнат от OnDisable и не бива да задържа inspection.
+        if (inspectedDocument != null && (!inspectedDocument.isActiveAndEnabled || !inspectedDocument.IsInspecting))
+            inspectedDocument = null;
+
+        if (!interactionEnabled || inputReader == null || !inputReader.isActiveAndEnabled)
         {
             return;
         }
+
+        // Esc има приоритет пред E и не задейства скрития инструмент.
+        if (inputReader.ReadPause())
+            return;
+
+        if (inspectedDocument != null)
+        {
+            // Документът се затваря с E дори когато raycast не сочи към него.
+            if (inputReader.ReadInteract())
+            {
+                if (inspectedDocument.IsInspecting)
+                {
+                    inspectedDocument.Interact();
+                }
+
+                inspectedDocument = null;
+            }
+
+            return;
+        }
+
+        UpdateTarget();
 
         if (!inputReader.ReadInteract())
         {
             return;
         }
 
-        if (inspectedDocument != null)
+        // Използва същия target, който ще прочете HUD, без втори raycast.
+        IInteractable interactable = CurrentTarget;
+        if (interactable == null)
         {
-            if (inspectedDocument.IsInspecting)
-            {
-                inspectedDocument.Interact();
-            }
-
-            inspectedDocument = null;
             return;
         }
 
-        // проверява за обект
+        interactable.Interact();
+
+        if (interactable is DocumentInteractable document && document.IsInspecting)
+        {
+            inspectedDocument = document;
+            currentTarget = null;
+        }
+    }
+
+    private void UpdateTarget()
+    {
+        // Проверява преди E, за да може HUD да показва наличното действие.
         if (Physics.Raycast(
             playerCamera.transform.position,
             playerCamera.transform.forward,
             out RaycastHit hit,
             interactionDistance))
         {
-            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
-
-            if (interactable != null)
+            MonoBehaviour candidate = hit.collider.GetComponent<IInteractable>() as MonoBehaviour;
+            if (candidate != null && candidate.isActiveAndEnabled)
             {
-                interactable.Interact();
-
-                if (interactable is DocumentInteractable document && document.IsInspecting)
-                {
-                    inspectedDocument = document;
-                }
+                currentTarget = candidate;
             }
         }
     }
@@ -72,5 +124,15 @@ public class PlayerInteraction : MonoBehaviour
     {
         // включва или спира взаимодействието
         interactionEnabled = isEnabled;
+        if (!isEnabled)
+        {
+            currentTarget = null;
+        }
+    }
+
+    private void OnDisable()
+    {
+        ModeController?.RestoreTimeOnShutdown();
+        currentTarget = null;
     }
 }

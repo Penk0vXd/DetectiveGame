@@ -25,6 +25,8 @@ public class ComputerUIController : MonoBehaviour
     private bool referencesValid;
 
     public bool IsOpen { get; private set; }
+    public bool CanOpen => isActiveAndEnabled && !IsOpen && computerRoot != null
+        && screenOffPanel != null && bootPanel != null && desktopPanel != null && powerMenuPanel != null;
 
     public event Action ExitRequested;
 
@@ -52,18 +54,28 @@ public class ComputerUIController : MonoBehaviour
 
     private void OnDisable()
     {
-        if (!IsOpen || desktopPanel == null)
+        if (!IsOpen)
         {
             return;
         }
 
-        IsOpen = false;
+        CloseComputer();
+        ExitRequested?.Invoke();
+    }
+
+    private void Update()
+    {
+        if (!IsOpen || computerRoot == null || computerRoot.activeInHierarchy)
+            return;
+
+        // Външно скрит UI root не бива да задържа режима на играча.
+        CloseComputer();
         ExitRequested?.Invoke();
     }
 
     public bool OpenComputer()
     {
-        if (!referencesValid || IsOpen)
+        if (!CanOpen)
         {
             return false;
         }

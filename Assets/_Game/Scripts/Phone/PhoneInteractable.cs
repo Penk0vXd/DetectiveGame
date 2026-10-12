@@ -8,6 +8,14 @@ public class PhoneInteractable : MonoBehaviour, IInteractable
     [SerializeField] private PhoneUIController phoneUI;
 
     private bool isPhoneModeActive;
+    [SerializeField] private string displayName = "Телефон";
+
+    public string DisplayName => displayName;
+    public string ActionLabel => "Използвай";
+    private InteractionModeController ModeController => playerInteraction != null ? playerInteraction.ModeController : null;
+    public bool CanInteract => isActiveAndEnabled && HasRequiredReferences()
+        && !isPhoneModeActive && phoneUI.CanOpen
+        && ModeController != null && ModeController.CanEnter(this);
 
     private void Awake()
     {
@@ -37,7 +45,7 @@ public class PhoneInteractable : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (!HasRequiredReferences() || isPhoneModeActive || phoneUI.IsOpen)
+        if (!CanInteract)
         {
             return;
         }
@@ -48,21 +56,18 @@ public class PhoneInteractable : MonoBehaviour, IInteractable
 
     private void OpenPhone()
     {
+        if (!ModeController.TryEnter(this, InteractionModeController.Mode.FocusedUI))
+            return;
+
         if (!phoneUI.OpenPhone())
         {
+            ModeController.TryExit(this);
             return;
         }
 
         // отваря телефона
         isPhoneModeActive = true;
 
-        // спира управлението
-        playerController.SetControlEnabled(false);
-        playerInteraction.SetInteractionEnabled(false);
-
-        // показва курсора
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 
     private void ClosePhone()
@@ -76,12 +81,7 @@ public class PhoneInteractable : MonoBehaviour, IInteractable
         isPhoneModeActive = false;
         phoneUI.ClosePhone();
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        // връща управлението
-        playerController.SetControlEnabled(true);
-        playerInteraction.SetInteractionEnabled(true);
+        ModeController?.TryExit(this);
     }
 
     private bool HasRequiredReferences()

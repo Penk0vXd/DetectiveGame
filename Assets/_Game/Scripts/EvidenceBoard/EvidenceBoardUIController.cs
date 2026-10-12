@@ -41,6 +41,7 @@ public class EvidenceBoardUIController : MonoBehaviour
     private bool referencesValid;
 
     public bool IsOpen { get; private set; }
+    public bool CanOpen => isActiveAndEnabled && HasRequiredReferences() && !IsOpen;
 
     public event Action ExitRequested;
 
@@ -77,7 +78,17 @@ public class EvidenceBoardUIController : MonoBehaviour
             return;
         }
 
-        IsOpen = false;
+        CloseBoard();
+        ExitRequested?.Invoke();
+    }
+
+    private void Update()
+    {
+        if (!IsOpen || boardRoot == null || boardRoot.activeInHierarchy)
+            return;
+
+        // Външно скрит UI root освобождава активния инструмент.
+        CloseBoard();
         ExitRequested?.Invoke();
     }
 
@@ -85,7 +96,7 @@ public class EvidenceBoardUIController : MonoBehaviour
     {
         Initialize();
 
-        if (!referencesValid || IsOpen)
+        if (!CanOpen)
         {
             return false;
         }

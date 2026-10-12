@@ -8,6 +8,14 @@ public class EvidenceBoardInteractable : MonoBehaviour, IInteractable
     [SerializeField] private EvidenceBoardUIController boardUI;
 
     private bool isBoardModeActive;
+    [SerializeField] private string displayName = "Табло";
+
+    public string DisplayName => displayName;
+    public string ActionLabel => "Разгледай";
+    private InteractionModeController ModeController => playerInteraction != null ? playerInteraction.ModeController : null;
+    public bool CanInteract => isActiveAndEnabled && HasRequiredReferences()
+        && !isBoardModeActive && boardUI.CanOpen
+        && ModeController != null && ModeController.CanEnter(this);
 
     private void Awake()
     {
@@ -37,7 +45,7 @@ public class EvidenceBoardInteractable : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (!HasRequiredReferences() || isBoardModeActive || boardUI.IsOpen)
+        if (!CanInteract)
         {
             return;
         }
@@ -48,21 +56,18 @@ public class EvidenceBoardInteractable : MonoBehaviour, IInteractable
 
     private void OpenBoard()
     {
+        if (!ModeController.TryEnter(this, InteractionModeController.Mode.FocusedUI))
+            return;
+
         if (!boardUI.ShowBoard())
         {
+            ModeController.TryExit(this);
             return;
         }
 
         // отваря таблото
         isBoardModeActive = true;
 
-        // спира управлението
-        playerController.SetControlEnabled(false);
-        playerInteraction.SetInteractionEnabled(false);
-
-        // показва курсора
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 
     private void CloseBoard()
@@ -80,12 +85,7 @@ public class EvidenceBoardInteractable : MonoBehaviour, IInteractable
             boardUI.CloseBoard();
         }
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        // връща управлението
-        playerController.SetControlEnabled(true);
-        playerInteraction.SetInteractionEnabled(true);
+        ModeController?.TryExit(this);
     }
 
     private bool HasRequiredReferences()
