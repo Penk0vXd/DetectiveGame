@@ -103,6 +103,8 @@ public static class InteractionHUDSmokeTest
             UnityEngine.Object.FindAnyObjectByType<DocumentInteractable>()
         };
         PauseUIController pause = UnityEngine.Object.FindAnyObjectByType<PauseUIController>();
+        Require(pause != null && pause.enabled && Field<GameObject>(pause, "pauseRoot") != null,
+            "Pause controller/runtime view не се създаде от Office сцената.");
         if (pause != null)
         {
             InputAction pauseAction = Field<DetectiveGameInput>(reader, "input").asset.FindAction("Player/Pause", false);
