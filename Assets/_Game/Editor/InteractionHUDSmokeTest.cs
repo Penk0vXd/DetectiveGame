@@ -148,6 +148,8 @@ public static class InteractionHUDSmokeTest
             Physics.SyncTransforms();
             Collider collider = target.GetComponent<Collider>();
             camera.transform.position = collider.bounds.center - Vector3.forward * 2;
+            // Placement probe е завъртял камерата; изолираният тест гледа по +Z.
+            camera.transform.rotation = Quaternion.identity;
             Pump(player, hud, keyboard);
             Require(ReferenceEquals(player.CurrentTarget, target), "Грешен raycast target: " + target.name);
             Require(prompt.gameObject.activeSelf && prompt.text.Contains(((IInteractable)target).DisplayName), "Липсва име.");
@@ -179,11 +181,19 @@ public static class InteractionHUDSmokeTest
             UnityEngine.Object.DestroyImmediate(wall);
             Physics.SyncTransforms();
 
+            Quaternion viewBeforeTool = camera.transform.localRotation;
+            float fovBeforeTool = camera.fieldOfView;
             Pump(player, hud, keyboard, Key.E);
             Require(!indicator.activeSelf, "HUD остава във focused mode: " + target.name);
             Require(ReferenceEquals(player.ModeController.ActiveOwner, target)
                 && player.ModeController.CurrentMode != InteractionModeController.Mode.World,
                 "Общият mode controller не пази активния инструмент: " + target.name);
+            if (target is PhoneInteractable || target is EvidenceBoardInteractable)
+            {
+                Require(camera.fieldOfView < fovBeforeTool
+                    && camera.WorldToViewportPoint(collider.bounds.center).x < 0.5f,
+                    "Физическият инструмент не остава в близък кадър вляво: " + target.name);
+            }
             Require(player.ModeController.TryPause(), "Pause върху инструмент не се отвори.");
             Pump(player, hud, keyboard);
             Require(player.ModeController.IsPaused && Time.timeScale == 0f
@@ -224,6 +234,12 @@ public static class InteractionHUDSmokeTest
             Require(player.ModeController.CurrentMode == InteractionModeController.Mode.World
                 && player.ModeController.ActiveOwner == null,
                 "Owner остава след exit.");
+            if (target is PhoneInteractable || target is EvidenceBoardInteractable)
+            {
+                Require(Quaternion.Angle(camera.transform.localRotation, viewBeforeTool) < 0.01f
+                    && Mathf.Approximately(camera.fieldOfView, fovBeforeTool),
+                    "Камерата не се възстанови след изход: " + target.name);
+            }
 
             // Проверява re-entry и втори exit през същия път.
             Pump(player, hud, keyboard, Key.E);
@@ -261,6 +277,12 @@ public static class InteractionHUDSmokeTest
             Require(player.ModeController.CurrentMode == InteractionModeController.Mode.World
                 && player.ModeController.ActiveOwner == null && player.IsWorldInteractionActive,
                 "Външно скрит UI root или disabled document задържа режима: " + target.name);
+            if (target is PhoneInteractable || target is EvidenceBoardInteractable)
+            {
+                Require(Quaternion.Angle(camera.transform.localRotation, viewBeforeTool) < 0.01f
+                    && Mathf.Approximately(camera.fieldOfView, fovBeforeTool),
+                    "Външно скрит UI root остави близкия кадър активен: " + target.name);
+            }
             camera.transform.position -= Vector3.forward * 10;
             Pump(player, hud, keyboard);
             Require(player.CurrentTarget == null && indicator.activeSelf && !prompt.gameObject.activeSelf, "Prompt извън обсег.");

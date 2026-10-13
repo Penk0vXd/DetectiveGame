@@ -67,6 +67,7 @@ public class PhoneInteractable : MonoBehaviour, IInteractable
 
         // отваря телефона
         isPhoneModeActive = true;
+        playerInteraction.FocusViewOnTool(this, GetComponent<Collider>(), 44f, 0.35f);
 
     }
 
@@ -80,6 +81,7 @@ public class PhoneInteractable : MonoBehaviour, IInteractable
         // затваря телефона
         isPhoneModeActive = false;
         phoneUI.ClosePhone();
+        playerInteraction?.RestoreFocusedView(this);
 
         ModeController?.TryExit(this);
     }

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2488a0e587de4994a7dce78dbff24432, type: 3}
+  m_Name: TestNpc
+  m_EditorClassIdentifier:
+  personId: prototype-npc
+  displayName: Тестов събеседник
+  role: Участник в технически тест на разговор. Не е част от разследване или сюжет.
+  speakingStyle: Учтив и кратък; признава несигурността си.
+  knowledge:
+  - id: test-known-01
+    category: лично известно
+    text: В този тест върху масата има синя папка. Това е единственият лично известен предмет.
+    requiredMaterialId:
+  - id: test-belief-01
+    category: несигурно убеждение
+    text: Предполагаш, че папката е празна, но не си я отварял и не знаеш съдържанието ѝ.
+    requiredMaterialId:
+  - id: test-unknown-01
+    category: изрично неизвестно
+    text: Не знаеш кой е оставил папката, кога е оставена или какво има в нея. Нямаш сведения за престъпление, хора, часове или местоположения.
+    requiredMaterialId:
+  - id: test-claim-01
+    category: поддържано твърдение
+    text: Казваш открито, че не си отварял папката. Нямаш зададен мотив да лъжеш.
+    requiredMaterialId:

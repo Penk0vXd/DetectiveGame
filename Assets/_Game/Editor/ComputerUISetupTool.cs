@@ -262,9 +262,9 @@ public static class ComputerUISetupTool
 
         CreateDesktopIcon(root, "MailIcon", "ПОЩА", computerUI.OpenMail);
         CreateDesktopIcon(root, "CaseFilesIcon", "ДОСИЕТА", computerUI.OpenCaseFiles);
-        CreateDesktopIcon(root, "DatabaseIcon", "ПОЛИЦЕЙСКА БАЗА", computerUI.OpenDatabase);
+        CreateDesktopIcon(root, "DatabaseIcon", "БАЗА ДАННИ", computerUI.OpenDatabase);
         CreateDesktopIcon(root, "PhotosIcon", "СНИМКИ", computerUI.OpenPhotos);
-        CreateDesktopIcon(root, "ForensicsIcon", "КРИМИНАЛИСТИКА", computerUI.OpenForensics);
+        CreateDesktopIcon(root, "ForensicsIcon", "ЕКСПЕРТИЗИ", computerUI.OpenForensics);
         return root;
     }
 

@@ -114,6 +114,7 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
 # Local project documentation and AI instructions
-/docs/
+/Docs/
+/DetectiveGame_Docs/
 /*.md
 /.cursor/rules/

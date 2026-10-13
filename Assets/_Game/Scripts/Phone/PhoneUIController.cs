@@ -13,7 +13,7 @@ public class PhoneUIController : MonoBehaviour
     [SerializeField] private TMP_Text contactNameText;
     [SerializeField] private TMP_Text dialogueText;
     [SerializeField] private string contactName = "Полицай Милър";
-    [SerializeField, TextArea(3, 8)] private string dialogue = "В кухнята намерихме бележка от паркинг. Отпечатаният час е 22:41.";
+    [SerializeField, TextArea(3, 8)] private string dialogue = "Бележката от паркинг е при материалите на бюрото ти. Намерихме я в кухнята на апартамента.";
 
     public bool IsOpen { get; private set; }
     public bool CanOpen => isActiveAndEnabled && HasRequiredReferences() && !IsOpen;

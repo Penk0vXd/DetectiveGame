@@ -9,6 +9,9 @@ public class PlayerInteraction : MonoBehaviour
     private PlayerInputReader inputReader;
     private DocumentInteractable inspectedDocument;
     private bool interactionEnabled = true;
+    private MonoBehaviour focusedViewOwner;
+    private Quaternion cameraRotationBeforeFocus;
+    private float cameraFovBeforeFocus;
 
     public InteractionModeController ModeController { get; private set; }
 
@@ -130,8 +133,38 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
+    // PROTOTYPE CODE: оставя физическия инструмент в кадъра зад четимия UI.
+    public void FocusViewOnTool(MonoBehaviour owner, Collider toolCollider, float fieldOfView, float horizontalBias)
+    {
+        if (owner == null || toolCollider == null || playerCamera == null || focusedViewOwner != null)
+            return;
+
+        Transform cameraTransform = playerCamera.transform;
+        Vector3 aimPoint = toolCollider.bounds.center + cameraTransform.right * horizontalBias;
+        Vector3 direction = aimPoint - cameraTransform.position;
+        if (direction.sqrMagnitude < 0.01f || Vector3.Dot(direction, cameraTransform.forward) <= 0f)
+            return;
+
+        focusedViewOwner = owner;
+        cameraRotationBeforeFocus = cameraTransform.localRotation;
+        cameraFovBeforeFocus = playerCamera.fieldOfView;
+        cameraTransform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        playerCamera.fieldOfView = Mathf.Min(cameraFovBeforeFocus, fieldOfView);
+    }
+
+    public void RestoreFocusedView(MonoBehaviour owner)
+    {
+        if (focusedViewOwner != owner || playerCamera == null)
+            return;
+
+        playerCamera.transform.localRotation = cameraRotationBeforeFocus;
+        playerCamera.fieldOfView = cameraFovBeforeFocus;
+        focusedViewOwner = null;
+    }
+
     private void OnDisable()
     {
+        RestoreFocusedView(focusedViewOwner);
         ModeController?.RestoreTimeOnShutdown();
         currentTarget = null;
     }

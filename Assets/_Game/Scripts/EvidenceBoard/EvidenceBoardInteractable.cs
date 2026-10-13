@@ -67,6 +67,7 @@ public class EvidenceBoardInteractable : MonoBehaviour, IInteractable
 
         // отваря таблото
         isBoardModeActive = true;
+        playerInteraction.FocusViewOnTool(this, GetComponent<Collider>(), 52f, 0.45f);
 
     }
 
@@ -79,6 +80,7 @@ public class EvidenceBoardInteractable : MonoBehaviour, IInteractable
 
         // затваря таблото
         isBoardModeActive = false;
+        playerInteraction?.RestoreFocusedView(this);
 
         if (boardUI != null)
         {

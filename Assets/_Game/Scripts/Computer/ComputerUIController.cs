@@ -23,6 +23,7 @@ public class ComputerUIController : MonoBehaviour
     [SerializeField] private GameObject forensicsWindow = null;
 
     private bool referencesValid;
+    private NpcChatUI npcChat;
 
     public bool IsOpen { get; private set; }
     public bool CanOpen => isActiveAndEnabled && !IsOpen && computerRoot != null
@@ -50,6 +51,8 @@ public class ComputerUIController : MonoBehaviour
 
         CloseAllDesktopApplications();
         ShowOffScreen();
+        if (referencesValid)
+            npcChat = NpcChatUI.Create(this, desktopPanel);
     }
 
     private void OnDisable()
@@ -284,6 +287,7 @@ public class ComputerUIController : MonoBehaviour
 
     public void CloseAllDesktopApplications()
     {
+        npcChat?.Close();
         CloseMail();
         CloseCaseFiles();
         SetActive(databaseWindow, false);
