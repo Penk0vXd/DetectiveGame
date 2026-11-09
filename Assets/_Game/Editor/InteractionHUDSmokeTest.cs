@@ -152,8 +152,8 @@ public static class InteractionHUDSmokeTest
             camera.transform.rotation = Quaternion.identity;
             Pump(player, hud, keyboard);
             Require(ReferenceEquals(player.CurrentTarget, target), "Грешен raycast target: " + target.name);
-            Require(prompt.gameObject.activeSelf && prompt.text.Contains(((IInteractable)target).DisplayName), "Липсва име.");
-            Require(prompt.text.Contains("[" + reader.GetInteractBindingLabel() + "]"), "Грешен binding.");
+            Require(prompt.gameObject.activeSelf && prompt.text == "[" + reader.GetInteractBindingLabel() + "] Interact",
+                "Липсва точният interaction prompt.");
 
             if (pause != null && ReferenceEquals(target, targets[0]))
             {
@@ -318,7 +318,7 @@ public static class InteractionHUDSmokeTest
         if (SessionState.GetBool("DetectiveGame.HUDSmoke.Visuals", false))
         {
             // Render на реалния HUD върху контролирани фонове; не е office screenshot.
-            prompt.text = "Компютър\n[" + reader.GetInteractBindingLabel() + "] Използвай";
+            prompt.text = "[" + reader.GetInteractBindingLabel() + "] Interact";
             prompt.gameObject.SetActive(true);
             TMP_Text shadow = Field<TMP_Text>(hud, "promptShadow");
             shadow.text = prompt.text;
@@ -358,8 +358,8 @@ public static class InteractionHUDSmokeTest
                     if (!ReferenceEquals(player.CurrentTarget, target))
                         continue;
 
-                    Require(prompt.gameObject.activeSelf && prompt.text.Contains(((IInteractable)target).DisplayName),
-                        "Office target е видим, но prompt липсва: " + target.name);
+                    Require(prompt.gameObject.activeSelf && prompt.text == "[" + player.GetComponent<PlayerInputReader>().GetInteractBindingLabel() + "] Interact",
+                        "Office target е видим, но interaction prompt липсва: " + target.name);
                     Debug.Log($"Office HUD original placement: {target.name}, camera={viewpoint}, distance={distance:F1}");
                     found = true;
                 }

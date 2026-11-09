@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// PROTOTYPE CODE: показва pause и изхода; save/settings се добавят отделно.
+// PROTOTYPE CODE: Office pause, save/load и настройки.
 [DefaultExecutionOrder(-100)]
 public class PauseUIController : MonoBehaviour
 {
@@ -17,6 +17,15 @@ public class PauseUIController : MonoBehaviour
     [SerializeField] private Button exitButton;
     [SerializeField] private Button cancelExitButton;
     [SerializeField] private Button confirmExitButton;
+    private Button saveButton;
+    private Button loadButton;
+    private Button settingsButton;
+    private Button confirmSaveButton;
+    private Button cancelSaveButton;
+    private GameObject saveConfirmationPanel;
+    private TMP_Text statusText;
+    private OfficeSettingsUI settingsUI;
+    private OfficeSaveController saveController;
 
     private bool referencesValid;
     private GameObject selectionBeforePause;
@@ -38,6 +47,9 @@ public class PauseUIController : MonoBehaviour
             inputReader = GetComponent<PlayerInputReader>();
         if (playerInteraction == null)
             playerInteraction = GetComponent<PlayerInteraction>();
+        saveController = GetComponent<OfficeSaveController>();
+        if (saveController == null)
+            saveController = gameObject.AddComponent<OfficeSaveController>();
 
         // Старите сцени нямат serialized PauseCanvas. Изграждаме същия малък
         // екран в runtime, за да работи Esc и в build без Editor setup стъпка.
@@ -54,6 +66,14 @@ public class PauseUIController : MonoBehaviour
                 exitButton = view.ExitButton;
                 cancelExitButton = view.CancelExitButton;
                 confirmExitButton = view.ConfirmExitButton;
+                saveButton = view.SaveButton;
+                loadButton = view.LoadButton;
+                settingsButton = view.SettingsButton;
+                confirmSaveButton = view.ConfirmSaveButton;
+                cancelSaveButton = view.CancelSaveButton;
+                saveConfirmationPanel = view.SaveConfirmationPanel;
+                statusText = view.StatusText;
+                settingsUI = OfficeSettingsUI.Create(pauseRoot.transform, view.Font, inputReader, ShowMain);
             }
             catch (Exception exception)
             {
@@ -63,7 +83,10 @@ public class PauseUIController : MonoBehaviour
 
         referencesValid = inputReader != null && playerInteraction != null && pauseRoot != null
             && mainPanel != null && exitConfirmationPanel != null && resumeButton != null
-            && exitButton != null && cancelExitButton != null && confirmExitButton != null;
+            && exitButton != null && cancelExitButton != null && confirmExitButton != null
+            && saveButton != null && loadButton != null && settingsButton != null
+            && confirmSaveButton != null && cancelSaveButton != null
+            && saveConfirmationPanel != null && settingsUI != null && statusText != null;
         if (!referencesValid)
         {
             Debug.LogError("PauseUIController няма зададени нужните references", this);
@@ -75,6 +98,11 @@ public class PauseUIController : MonoBehaviour
         exitButton.onClick.AddListener(ShowExitConfirmation);
         cancelExitButton.onClick.AddListener(ShowMain);
         confirmExitButton.onClick.AddListener(ConfirmExit);
+        saveButton.onClick.AddListener(Save);
+        loadButton.onClick.AddListener(Load);
+        settingsButton.onClick.AddListener(ShowSettings);
+        confirmSaveButton.onClick.AddListener(ConfirmSave);
+        cancelSaveButton.onClick.AddListener(ShowMain);
         pauseRoot.SetActive(false);
     }
 
@@ -110,6 +138,7 @@ public class PauseUIController : MonoBehaviour
             return;
 
         selectionBeforePause = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        statusText.text = "";
         ShowMain();
         pauseRoot.SetActive(true);
         if (EventSystem.current != null)
@@ -122,6 +151,7 @@ public class PauseUIController : MonoBehaviour
             return;
 
         pauseRoot.SetActive(false);
+        settingsUI.Hide();
         playerInteraction.ModeController.TryResume();
         // Възстановява focus чак в следващия кадър: същият Esc не стига до
         // подлежащото поле/бутон като UI Cancel.
@@ -139,6 +169,9 @@ public class PauseUIController : MonoBehaviour
 
         mainPanel.SetActive(true);
         exitConfirmationPanel.SetActive(false);
+        saveConfirmationPanel.SetActive(false);
+        settingsUI.Hide();
+        loadButton.interactable = saveController.HasSave;
         if (pauseRoot.activeInHierarchy && EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(resumeButton.gameObject);
     }
@@ -150,6 +183,8 @@ public class PauseUIController : MonoBehaviour
 
         mainPanel.SetActive(false);
         exitConfirmationPanel.SetActive(true);
+        saveConfirmationPanel.SetActive(false);
+        settingsUI.Hide();
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(cancelExitButton.gameObject);
     }
@@ -158,6 +193,44 @@ public class PauseUIController : MonoBehaviour
     {
         if (playerInteraction.ModeController.IsPaused && exitConfirmationPanel.activeSelf)
             Application.Quit();
+    }
+
+    private void Save()
+    {
+        if (!playerInteraction.ModeController.IsPaused) return;
+        if (saveController.HasSave)
+        {
+            mainPanel.SetActive(false);
+            saveConfirmationPanel.SetActive(true);
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(cancelSaveButton.gameObject);
+        }
+        else ConfirmSave();
+    }
+
+    private void ConfirmSave()
+    {
+        if (!playerInteraction.ModeController.IsPaused) return;
+        saveController.TrySave(out string message);
+        statusText.text = message;
+        ShowMain();
+    }
+
+    private void Load()
+    {
+        if (!playerInteraction.ModeController.IsPaused) return;
+        saveController.TryLoad(out string message);
+        statusText.text = message;
+        ShowMain();
+    }
+
+    private void ShowSettings()
+    {
+        if (!playerInteraction.ModeController.IsPaused) return;
+        mainPanel.SetActive(false);
+        exitConfirmationPanel.SetActive(false);
+        saveConfirmationPanel.SetActive(false);
+        settingsUI.Show();
     }
 
     private void OnDisable()
@@ -178,6 +251,11 @@ public class PauseUIController : MonoBehaviour
             exitButton.onClick.RemoveListener(ShowExitConfirmation);
             cancelExitButton.onClick.RemoveListener(ShowMain);
             confirmExitButton.onClick.RemoveListener(ConfirmExit);
+            saveButton.onClick.RemoveListener(Save);
+            loadButton.onClick.RemoveListener(Load);
+            settingsButton.onClick.RemoveListener(ShowSettings);
+            confirmSaveButton.onClick.RemoveListener(ConfirmSave);
+            cancelSaveButton.onClick.RemoveListener(ShowMain);
         }
         if (runtimeRoot != null)
             Destroy(runtimeRoot);
@@ -194,6 +272,14 @@ internal sealed class PauseUIRuntimeView
     public Button ExitButton { get; private set; }
     public Button CancelExitButton { get; private set; }
     public Button ConfirmExitButton { get; private set; }
+    public Button SaveButton { get; private set; }
+    public Button LoadButton { get; private set; }
+    public Button SettingsButton { get; private set; }
+    public Button ConfirmSaveButton { get; private set; }
+    public Button CancelSaveButton { get; private set; }
+    public GameObject SaveConfirmationPanel { get; private set; }
+    public TMP_Text StatusText { get; private set; }
+    public TMP_FontAsset Font { get; private set; }
 
     public static PauseUIRuntimeView Create()
     {
@@ -204,6 +290,7 @@ internal sealed class PauseUIRuntimeView
             throw new InvalidOperationException("Pause UI няма достъпен TMP font.");
 
         var view = new PauseUIRuntimeView();
+        view.Font = font;
         view.Root = new GameObject("RuntimePauseCanvas", typeof(RectTransform), typeof(Canvas),
             typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = view.Root.GetComponent<Canvas>();
@@ -222,12 +309,26 @@ internal sealed class PauseUIRuntimeView
         blockerImage.color = new Color(0.015f, 0.02f, 0.025f, 0.92f);
         blockerImage.raycastTarget = true;
 
-        RectTransform main = Child(view.Root.transform, "MainPanel", Vector2.zero, new Vector2(560, 420));
+        RectTransform main = Child(view.Root.transform, "MainPanel", Vector2.zero, new Vector2(620, 620));
         Panel(main);
-        Text(Child(main, "Title", new Vector2(0, 130), new Vector2(500, 65)), font, "ПАУЗА", 36);
-        view.ResumeButton = Button(Child(main, "ResumeButton", new Vector2(0, 20), new Vector2(390, 64)), font, "Продължи");
-        view.ExitButton = Button(Child(main, "ExitButton", new Vector2(0, -76), new Vector2(390, 64)), font, "Изход от играта");
+        Text(Child(main, "Title", new Vector2(0, 245), new Vector2(500, 60)), font, "ПАУЗА", 34);
+        view.ResumeButton = Button(Child(main, "ResumeButton", new Vector2(0, 160), new Vector2(440, 58)), font, "Продължи");
+        view.SaveButton = Button(Child(main, "SaveButton", new Vector2(0, 85), new Vector2(440, 58)), font, "Запази играта");
+        view.LoadButton = Button(Child(main, "LoadButton", new Vector2(0, 10), new Vector2(440, 58)), font, "Зареди играта");
+        view.SettingsButton = Button(Child(main, "SettingsButton", new Vector2(0, -65), new Vector2(440, 58)), font, "Настройки");
+        view.ExitButton = Button(Child(main, "ExitButton", new Vector2(0, -140), new Vector2(440, 58)), font, "Изход от играта");
+        RectTransform status = Child(main, "Status", new Vector2(0, -240), new Vector2(540, 70));
+        Text(status, font, "", 20);
+        view.StatusText = status.GetComponent<TMP_Text>();
         view.MainPanel = main.gameObject;
+
+        RectTransform save = Child(view.Root.transform, "SaveConfirmationPanel", Vector2.zero, new Vector2(620, 350));
+        Panel(save);
+        Text(Child(save, "Title", new Vector2(0, 90), new Vector2(560, 80)), font, "ПРЕЗАПИС НА ИГРАТА?", 28);
+        view.CancelSaveButton = Button(Child(save, "CancelButton", new Vector2(-120, -70), new Vector2(210, 64)), font, "Откажи");
+        view.ConfirmSaveButton = Button(Child(save, "ConfirmButton", new Vector2(120, -70), new Vector2(210, 64)), font, "Презапиши");
+        save.gameObject.SetActive(false);
+        view.SaveConfirmationPanel = save.gameObject;
 
         RectTransform confirm = Child(view.Root.transform, "ExitConfirmationPanel", Vector2.zero, new Vector2(560, 350));
         Panel(confirm);

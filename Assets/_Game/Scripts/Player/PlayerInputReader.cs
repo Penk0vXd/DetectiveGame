@@ -9,6 +9,7 @@ public class PlayerInputReader : MonoBehaviour
     {
         // създава input actions
         CreateInput();
+        OfficeSettingsStore.ApplyBindings(this);
     }
 
     private void OnEnable()
@@ -73,6 +74,21 @@ public class PlayerInputReader : MonoBehaviour
         EnsureInputReady();
         // Чете реалния binding, включително бъдещ runtime override.
         return input.Player.Interact.GetBindingDisplayString();
+    }
+
+    public string GetBindingLabel(int index)
+    {
+        EnsureInputReady();
+        return index < 4 ? input.Player.Move.GetBindingDisplayString(index + 1)
+            : input.Player.Interact.GetBindingDisplayString(0);
+    }
+
+    public void ApplyBindings(string[] paths)
+    {
+        EnsureInputReady();
+        for (int i = 0; i < 4; i++)
+            input.Player.Move.ApplyBindingOverride(i + 1, paths[i]);
+        input.Player.Interact.ApplyBindingOverride(0, paths[4]);
     }
 
     private void CreateInput()

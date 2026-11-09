@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396",
+      "installMode": "copy"
+    },
+    "game-ui-ux": {
+      "source": "gamedev-skills/awesome-gamedev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/disciplines/game-ui-ux/SKILL.md",
+      "computedHash": "490f2da7505775f88c4bbd7c98bc2552ea60821210f5ae8c1e00414161be60f7",
+      "installMode": "copy"
+    },
+    "unity-csharp-scripting": {
+      "source": "gamedev-skills/awesome-gamedev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/unity/unity-csharp-scripting/SKILL.md",
+      "computedHash": "1e4b03c1f10892578df5dd0d9f0ff1f47650804e2d84d735c4c7a5afbffea062",
+      "installMode": "copy"
+    },
+    "unity-input-system": {
+      "source": "gamedev-skills/awesome-gamedev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/unity/unity-input-system/SKILL.md",
+      "computedHash": "07bb7ea90ca622ab38890dbc2dd34cd40319425cd3411784a9f943d023c0b1c5",
+      "installMode": "copy"
+    }
+  }
+}

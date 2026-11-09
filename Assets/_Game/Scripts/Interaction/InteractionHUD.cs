@@ -36,9 +36,7 @@ public class InteractionHUD : MonoBehaviour
         bool showPrompt = target != null && !string.IsNullOrWhiteSpace(binding);
         promptText.gameObject.SetActive(showPrompt);
         promptShadow.gameObject.SetActive(showPrompt);
-        promptText.text = showPrompt
-            ? $"{target.DisplayName}\n[{binding}] {target.ActionLabel}"
-            : string.Empty;
+        promptText.text = showPrompt ? $"[{binding}] Interact" : string.Empty;
         // Отделен TMP слой пази сянката и при glyphs от Cyrillic fallback.
         promptShadow.text = promptText.text;
     }

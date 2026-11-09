@@ -290,6 +290,9 @@ public class ComputerUIController : MonoBehaviour
         npcChat?.Close();
         CloseMail();
         CloseCaseFiles();
+        CloseDatabase();
+        ClosePhotos();
+        CloseForensics();
         SetActive(databaseWindow, false);
         SetActive(photosWindow, false);
         SetActive(forensicsWindow, false);

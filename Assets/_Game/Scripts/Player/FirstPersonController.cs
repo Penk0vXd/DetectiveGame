@@ -76,4 +76,19 @@ public class FirstPersonController : MonoBehaviour
         // включва или спира управлението
         controlEnabled = isEnabled;
     }
+
+    public float ViewPitch => cameraPitch;
+
+    public void RestorePose(Vector3 position, float yaw, float pitch)
+    {
+        // CharacterController не трябва да избутва играча по време на load.
+        bool wasEnabled = controller.enabled;
+        controller.enabled = false;
+        transform.position = position;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+        cameraPitch = Mathf.Clamp(pitch, -80f, 80f);
+        playerCamera.transform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+        verticalVelocity = 0f;
+        controller.enabled = wasEnabled;
+    }
 }

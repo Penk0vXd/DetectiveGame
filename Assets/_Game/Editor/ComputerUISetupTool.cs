@@ -495,7 +495,7 @@ public static class ComputerUISetupTool
         Image previewImage = previewImageRect.GetComponent<Image>();
         previewImage.preserveAspect = true;
         TMP_Text title = CreateDetailField(preview, "PhotoTitle", "ЗАГЛАВИЕ", 34f);
-        TMP_Text date = CreateDetailField(preview, "PhotoDate", "ДАТА", 32f);
+        TMP_Text date = CreateDetailField(preview, "PhotoDate", "ЗАСНЕТО", 32f);
         TMP_Text location = CreateDetailField(preview, "PhotoLocation", "МЕСТОПОЛОЖЕНИЕ", 32f);
         TMP_Text description = CreateDetailField(preview, "PhotoDescription", "ОПИСАНИЕ", 120f);
         SetSerializedReferences(controller,
@@ -520,8 +520,8 @@ public static class ComputerUISetupTool
         ConfigureDetailsLayout(details);
         TMP_Text reportNumber = CreateDetailField(details, "ReportNumber", "НОМЕР НА ДОКЛАД", 32f);
         TMP_Text title = CreateDetailField(details, "ReportTitle", "ЗАГЛАВИЕ", 34f);
-        TMP_Text status = CreateDetailField(details, "ReportStatus", "СТАТУС", 32f);
-        TMP_Text date = CreateDetailField(details, "ReportDate", "ДАТА", 32f);
+        TMP_Text status = CreateDetailField(details, "ReportStatus", "СТАТУС НА ДОКЛАДА", 32f);
+        TMP_Text date = CreateDetailField(details, "ReportDate", "ДАТА НА ДОКЛАДА", 32f);
         TMP_Text relatedCase = CreateDetailField(details, "RelatedCase", "СВЪРЗАНО ДЕЛО", 32f);
         TMP_Text summary = CreateDetailField(details, "ReportSummary", "РЕЗЮМЕ", 80f);
         CreateLayoutText("FullReportLabelText", details, "ПЪЛЕН ДОКЛАД", 15f, SecondaryTextColor, 24f, true);
@@ -808,9 +808,9 @@ public static class ComputerUISetupTool
         SerializedProperty emails = serialized.FindProperty("emails");
         emails.arraySize = 2;
         SetEmail(emails.GetArrayElementAtIndex(0), "Отдел Криминалистика", "Предварителен доклад от огледа",
-            "14/10/2011 09:32", "Предварителният оглед е завършен.\n\nДопълнителните резултати ще бъдат изпратени по-късно.");
+            "15/10/2011 09:32", "Предварителният оглед е завършен.\n\nДопълнителните резултати ще бъдат изпратени по-късно.");
         SetEmail(emails.GetArrayElementAtIndex(1), "Полицай Милър", "Претърсване на апартамента",
-            "14/10/2011 10:05", "В кухнята намерихме бележка от паркинг.\n\nОтпечатаният час е 22:41.");
+            "15/10/2011 10:05", "В кухнята намерихме бележка от паркинг.\n\nОтпечатаният час е 22:41.");
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -822,12 +822,12 @@ public static class ComputerUISetupTool
         SerializedProperty activeCase = cases.GetArrayElementAtIndex(0);
         SetCase(activeCase, "CASE-0017", "Убийство в апартамент на бул. „Ривърсайд“", "ОТВОРЕНО",
             "14 октомври 2011", "бул. „Ривърсайд“ 17", "Даниел Харис", "Майкъл Картър",
-            "Жертвата е открита мъртва в апартамента си около 23:20. Разследването продължава.");
+            "Жертвата е открита мъртва в апартамента си. Първоначалният доклад отбелязва отзоваване на сигнал в 23:20. Разследването продължава.");
         SerializedProperty activePeople = activeCase.FindPropertyRelative("people");
         activePeople.arraySize = 4;
         SetPerson(activePeople.GetArrayElementAtIndex(0), "Даниел Харис", "Жертва", "Обитател на апартамента, в който е подаден сигналът.");
-        SetPerson(activePeople.GetArrayElementAtIndex(1), "Елена Мур", "Свидетел", "Съседка, която съобщава, че е чула движение в коридора.");
-        SetPerson(activePeople.GetArrayElementAtIndex(2), "Томас Рийд", "Лице от интерес", "Познат на жертвата, посочен в първоначалния доклад.");
+        SetPerson(activePeople.GetArrayElementAtIndex(1), "Елена Мур", "Свидетел", "Съседка, която съобщава за шум в коридора, но не посочва източника му.");
+        SetPerson(activePeople.GetArrayElementAtIndex(2), "Томас Рийд", "Лице от интерес", "Познат на жертвата. В CASE-0017 е включен като лице от интерес.");
         SetPerson(activePeople.GetArrayElementAtIndex(3), "Полицай Милър", "Полицай", "Служителят, който е описал претърсването на апартамента.");
         SerializedProperty activeRecords = activeCase.FindPropertyRelative("records");
         activeRecords.arraySize = 3;
@@ -854,8 +854,8 @@ public static class ComputerUISetupTool
         SerializedObject serialized = new SerializedObject(controller);
         SerializedProperty records = serialized.FindProperty("records");
         records.arraySize = 3;
-        SetDatabaseRecord(records.GetArrayElementAtIndex(0), "Томас Рийд", "22/03/1979", "ул. „Уестбридж“ 42", "Шофьор-доставчик", "Самоличността и адресът са потвърдени. Има едно предишно нарушение на пътя. Записът не съдържа заключение за активното дело.");
-        SetDatabaseRecord(records.GetArrayElementAtIndex(1), "Елена Мур", "08/11/1984", "бул. „Ривърсайд“ 19", "Счетоводител", "Настоящият адрес е потвърден. Няма посочени криминални регистрации.");
+        SetDatabaseRecord(records.GetArrayElementAtIndex(0), "Томас Рийд", "22/03/1979", "ул. „Уестбридж“ 42", "Шофьор-доставчик", "Самоличността и адресът са потвърдени. В наличния запис е посочено едно предишно нарушение на пътя. Записът не съдържа заключение за активното дело.");
+        SetDatabaseRecord(records.GetArrayElementAtIndex(1), "Елена Мур", "08/11/1984", "бул. „Ривърсайд“ 19", "Счетоводител", "Настоящият адрес е потвърден. В наличния запис не са посочени криминални регистрации.");
         SetDatabaseRecord(records.GetArrayElementAtIndex(2), "Даниел Харис", "17/06/1975", "бул. „Ривърсайд“ 17", "Архитект", "Записът за самоличност е свързан с CASE-0017.");
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -954,8 +954,8 @@ public static class ComputerUISetupTool
         SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard1/Description", "Снимка, направена на местопрестъплението");
         SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard2/Title", "БЕЛЕЖКА ОТ ПАРКИНГ");
         SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard2/Description", "Отпечатаният час е 22:41");
-        SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard3/Title", "СВИДЕТЕЛСКИ ПОКАЗАНИЯ");
-        SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard3/Description", "Свидетелят твърди, че лицето е било вкъщи");
+        SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard3/Title", "ПОКАЗАНИЕ — ЕЛЕНА МУР");
+        SetSceneText(canvas, "BoardRoot/BoardPanel/EvidenceCard3/Description", "Елена Мур съобщава за шум в коридора, но не посочва източника му");
         SetSceneText(canvas, "BoardRoot/EvidenceDetailsPanel/EvidenceTitleText", string.Empty);
         SetSceneText(canvas, "BoardRoot/EvidenceDetailsPanel/EvidenceDescriptionText", string.Empty);
         SetSceneText(canvas, "BoardRoot/EvidenceDetailsPanel/BackButton/Text (TMP)", "НАЗАД");
@@ -964,10 +964,7 @@ public static class ComputerUISetupTool
         PhoneUIController phone = FindSceneComponent<PhoneUIController>(scene);
         if (phone != null)
         {
-            SerializedObject phoneData = new SerializedObject(phone);
-            phoneData.FindProperty("contactName").stringValue = "Полицай Милър";
-            phoneData.FindProperty("dialogue").stringValue = "В кухнята намерихме бележка от паркинг. Отпечатаният час е 22:41.";
-            phoneData.ApplyModifiedPropertiesWithoutUndo();
+            ConfigurePrototypePhoneContent(phone);
         }
 
         EvidenceBoardUIController board = FindSceneComponent<EvidenceBoardUIController>(scene);
@@ -978,9 +975,22 @@ public static class ComputerUISetupTool
             cards.arraySize = 3;
             SetEvidenceCard(cards.GetArrayElementAtIndex(0), "Снимка на жертвата", "Снимка, направена на местопрестъплението.");
             SetEvidenceCard(cards.GetArrayElementAtIndex(1), "Бележка от паркинг", "Отпечатаният час върху бележката е 22:41.");
-            SetEvidenceCard(cards.GetArrayElementAtIndex(2), "Свидетелски показания", "Свидетелят твърди, че лицето е било вкъщи.");
+            SetEvidenceCard(cards.GetArrayElementAtIndex(2), "Показание — Елена Мур", "Елена Мур съобщава за шум в коридора, но не посочва източника му.");
             boardData.ApplyModifiedPropertiesWithoutUndo();
         }
+    }
+
+    internal static void ConfigurePrototypePhoneContent(PhoneUIController phone)
+    {
+        if (phone == null)
+        {
+            throw new ArgumentNullException(nameof(phone));
+        }
+
+        SerializedObject phoneData = new SerializedObject(phone);
+        phoneData.FindProperty("contactName").stringValue = "Полицай Милър";
+        phoneData.FindProperty("dialogue").stringValue = "Бележката от паркинг е при материалите на бюрото ти. Намерихме я в кухнята на апартамента.";
+        phoneData.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void SetSceneText(Transform root, string path, string value)

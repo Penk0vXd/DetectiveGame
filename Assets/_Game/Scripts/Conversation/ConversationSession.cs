@@ -38,6 +38,7 @@ public sealed class ConversationSession : IDisposable
             lifetime.Token.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(response) || response.Length > NpcPromptBuilder.MaxReplyCharacters)
                 throw new InvalidOperationException("Моделът върна празен или твърде дълъг отговор.");
+            response = ReplaceObservedMetaLeak(response);
             player.Status = ConversationTurnStatus.Accepted;
             State.Add(new ConversationTurn(State.PersonId, response, ConversationTurnStatus.Accepted));
             return new ConversationReply(State.PersonId, response);
@@ -66,6 +67,16 @@ public sealed class ConversationSession : IDisposable
         if (request.Text.Length > NpcPromptBuilder.MaxInputCharacters) return "Съобщението е твърде дълго (до 1200 знака).";
         if (request.MaterialIds.Count != 0) return "Няма проверено действие за представяне на този материал.";
         return null;
+    }
+
+    private static string ReplaceObservedMetaLeak(string response)
+    {
+        // Тесен prototype guard за реално наблюдавания failure; не е общ semantic validator.
+        if (response.IndexOf("игнорирам инструкци", StringComparison.OrdinalIgnoreCase) >= 0
+            || response.IndexOf("предоставеното досие", StringComparison.OrdinalIgnoreCase) >= 0)
+            return "Не знам това.";
+
+        return response;
     }
 
     public void Dispose()

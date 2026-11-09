@@ -113,6 +113,11 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
+# Standalone C# checks
+!/Tests/EvidenceBoardSession/EvidenceBoardSession.csproj
+/Tests/**/bin/
+/Tests/**/obj/
+
 # Local project documentation and AI instructions
 /Docs/
 /DetectiveGame_Docs/

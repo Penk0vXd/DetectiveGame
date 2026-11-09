@@ -14,6 +14,26 @@ public class ComputerPowerController : MonoBehaviour
     public ComputerPowerState CurrentState { get; private set; } = ComputerPowerState.Off;
 
     public event Action ComputerModeExitRequested;
+    public bool CanRestore => computerUI != null;
+
+    public ComputerPowerState StableState => isShuttingDown ? ComputerPowerState.Off
+        : CurrentState == ComputerPowerState.Sleeping
+        ? ComputerPowerState.Sleeping : CurrentState == ComputerPowerState.Off
+            ? ComputerPowerState.Off : ComputerPowerState.On;
+
+    public void RestoreStableState(ComputerPowerState state)
+    {
+        if (computerUI == null || state == ComputerPowerState.Booting)
+            throw new ArgumentException("Невалидно състояние на компютъра.", nameof(state));
+        if (powerRoutine != null)
+        {
+            StopCoroutine(powerRoutine);
+            powerRoutine = null;
+        }
+        isShuttingDown = false;
+        computerUI.CloseAllDesktopApplications();
+        SetState(state);
+    }
 
     private void Awake()
     {
