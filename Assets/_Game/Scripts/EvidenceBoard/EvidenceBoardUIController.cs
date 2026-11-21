@@ -49,6 +49,7 @@ public class EvidenceBoardUIController : MonoBehaviour
     private EvidenceBoardSession session;
     private RectTransform linksLayer;
     private TMP_InputField notesInput;
+    private BoardPlayerNotesView playerNotesView;
     private TMP_Text statusText;
     private TMP_Text detailProvenanceText;
     private Button cancelLinkButton;
@@ -90,6 +91,7 @@ public class EvidenceBoardUIController : MonoBehaviour
         {
             session = new EvidenceBoardSession(evidenceCards.Length);
             BuildSessionUI();
+            playerNotesView = BoardPlayerNotesView.Create(boardRoot.transform, session.PlayerNotes, evidenceTitleText.font);
         }
 
         if (boardRoot != null)
@@ -170,8 +172,9 @@ public class EvidenceBoardUIController : MonoBehaviour
         // показва доказателството
         evidenceTitleText.text = evidence.Title;
         evidenceDescriptionText.text = evidence.Description;
-        detailProvenanceText.text = $"{evidence.Type.ToUpperInvariant()} · Източник: {evidence.Source}";
+        detailProvenanceText.text = $"{evidence.Type.ToUpperInvariant()} — Източник: {evidence.Source}";
         boardPanel.SetActive(false);
+        playerNotesView.gameObject.SetActive(false);
         evidenceDetailsPanel.SetActive(true);
     }
 
@@ -185,6 +188,7 @@ public class EvidenceBoardUIController : MonoBehaviour
         // връща таблото
         evidenceDetailsPanel.SetActive(false);
         boardPanel.SetActive(true);
+        playerNotesView.gameObject.SetActive(true);
     }
 
     public void ExitBoard()
@@ -256,8 +260,8 @@ public class EvidenceBoardUIController : MonoBehaviour
             cardRects[i].anchorMax = new Vector2(.94f, top);
             cardRects[i].anchoredPosition = Vector2.zero;
             cardRects[i].sizeDelta = Vector2.zero;
-            cardProvenanceTexts[i].fontSize = 18;
-            cardProvenanceTexts[i].text = $"{evidenceCards[i].Type.ToUpperInvariant()} · {evidenceCards[i].Source}";
+            cardProvenanceTexts[i].fontSize = 22;
+            cardProvenanceTexts[i].text = $"{evidenceCards[i].Type.ToUpperInvariant()} — {evidenceCards[i].Source}";
         }
 
         linksLayer = Rect(panel, "BoardLinks", Vector2.zero, Vector2.one);
@@ -267,7 +271,7 @@ public class EvidenceBoardUIController : MonoBehaviour
         cancelLinkButton = Button(panel, "CancelLinkButton", "ОТКАЖИ", new Vector2(.55f, .38f),
             new Vector2(.94f, .44f), CancelLink);
         statusText = Label(panel, "BoardLinkStatus", "", new Vector2(.06f, .34f),
-            new Vector2(.94f, .38f), 17, TextAlignmentOptions.Center);
+            new Vector2(.94f, .38f), 20, TextAlignmentOptions.Center);
         removeButtons = new Button[LinkPairs.Length];
         removeLabels = new TMP_Text[LinkPairs.Length];
         for (int i = 0; i < LinkPairs.Length; i++)
@@ -277,13 +281,13 @@ public class EvidenceBoardUIController : MonoBehaviour
             removeButtons[i] = Button(panel, "RemoveLink" + i, "", new Vector2(.06f, top - .05f),
                 new Vector2(.94f, top), () => RemoveLink(pair.x, pair.y));
             removeLabels[i] = removeButtons[i].GetComponentInChildren<TMP_Text>();
-            removeLabels[i].fontSize = 15;
+            removeLabels[i].fontSize = 19;
         }
-        Label(panel, "BoardNotesHeader", "МОИ БЕЛЕЖКИ · Временно — само за тази сесия",
-            new Vector2(.06f, .14f), new Vector2(.94f, .19f), 16, TextAlignmentOptions.Left);
+        Label(panel, "BoardNotesHeader", "МОИ БЕЛЕЖКИ — Временно — само за тази сесия",
+            new Vector2(.06f, .14f), new Vector2(.94f, .19f), 20, TextAlignmentOptions.Left);
         BuildNotesInput(panel);
         detailProvenanceText = Label((RectTransform)evidenceDetailsPanel.transform, "BoardDetailSource", "",
-            new Vector2(.07f, .19f), new Vector2(.93f, .30f), 18, TextAlignmentOptions.Left);
+            new Vector2(.07f, .19f), new Vector2(.93f, .30f), 20, TextAlignmentOptions.Left);
         cancelLinkButton.gameObject.SetActive(false);
         linkButton.onClick.AddListener(() => cancelLinkButton.gameObject.SetActive(linking));
     }
@@ -295,7 +299,7 @@ public class EvidenceBoardUIController : MonoBehaviour
         rect.gameObject.AddComponent<RectMask2D>();
         TMP_Text value = Label(rect, "Text", "", new Vector2(.02f, .06f), new Vector2(.98f, .94f),
             18, TextAlignmentOptions.TopLeft);
-        TMP_Text placeholder = Label(rect, "Placeholder", "Напишете собствена бележка…",
+        TMP_Text placeholder = Label(rect, "Placeholder", "Напишете собствена бележка",
             new Vector2(.02f, .06f), new Vector2(.98f, .94f), 18, TextAlignmentOptions.TopLeft);
         placeholder.color = new Color(.65f, .68f, .64f);
         notesInput = rect.gameObject.AddComponent<TMP_InputField>();
@@ -352,7 +356,7 @@ public class EvidenceBoardUIController : MonoBehaviour
         {
             Vector2Int pair = LinkPairs[i];
             removeButtons[i].gameObject.SetActive(session.HasLink(pair.x, pair.y));
-            removeLabels[i].text = $"{evidenceCards[pair.x].Type} ↔ {evidenceCards[pair.y].Type} · Премахни";
+            removeLabels[i].text = $"{evidenceCards[pair.x].Type} ↔ {evidenceCards[pair.y].Type} — Премахни";
         }
         DrawLinks();
     }

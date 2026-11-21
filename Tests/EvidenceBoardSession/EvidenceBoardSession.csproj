@@ -6,5 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/EvidenceBoardSession.cs" Link="EvidenceBoardSession.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/PlayerNote.cs" Link="PlayerNote.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/PlayerNotesSession.cs" Link="PlayerNotesSession.cs" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-// PROTOTYPE CODE: временни връзки и бележки за една Board сесия, без save identity.
+// PROTOTYPE CODE: старите връзки и общият текст; PlayerNotes е отделна EB-001 система.
 public sealed class EvidenceBoardSession
 {
     private readonly int cardCount;
@@ -9,6 +9,7 @@ public sealed class EvidenceBoardSession
 
     public IReadOnlyCollection<(int First, int Second)> Links => links;
     public string Notes { get; set; } = string.Empty;
+    public PlayerNotesSession PlayerNotes { get; } = new PlayerNotesSession();
 
     public EvidenceBoardSession(int cardCount)
     {

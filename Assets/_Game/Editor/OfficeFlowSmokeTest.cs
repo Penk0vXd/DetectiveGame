@@ -742,17 +742,19 @@ public static class OfficeFlowSmokeTest
         };
         string[] expectedSources =
         {
-            "СНИМКА · Източник: Наличната снимка от местопрестъплението",
-            "ДОКУМЕНТ · Източник: Бележката от паркинг на бюрото",
-            "ПОКАЗАНИЕ · Източник: Елена Мур (запис в досието)"
+            "СНИМКА — Източник: Наличната снимка от местопрестъплението",
+            "ДОКУМЕНТ — Източник: Бележката от паркинг на бюрото",
+            "ПОКАЗАНИЕ — Източник: Елена Мур (запис в досието)"
         };
         // Оставя един реален frame за Canvas/CanvasScaler след активиране на BoardRoot.
         await Task.Delay(50);
-        Require(provenance[0].text == "СНИМКА · Наличната снимка от местопрестъплението"
-            && provenance[1].text == "ДОКУМЕНТ · Бележката от паркинг на бюрото"
-            && provenance[2].text == "ПОКАЗАНИЕ · Елена Мур (запис в досието)",
+        Require(provenance[0].text == "СНИМКА — Наличната снимка от местопрестъплението"
+            && provenance[1].text == "ДОКУМЕНТ — Бележката от паркинг на бюрото"
+            && provenance[2].text == "ПОКАЗАНИЕ — Елена Мур (запис в досието)",
             "Board cards show type and original source without interpreting the claim");
         await Capture("board-overview", boardRoot);
+        await BoardPlayerNotesSmokeTest.Exercise(boardRoot, boardSession, pause);
+        await Capture("board-player-notes", boardRoot);
         for (int i = 0; i < 3; i++)
         {
             ClickButton(boardRoot, "EvidenceCard" + (i + 1));
@@ -772,6 +774,10 @@ public static class OfficeFlowSmokeTest
         }
         TMP_InputField notes = Field<TMP_InputField>(ui, "notesInput");
         notes.text = "Моя временна хипотеза";
+        ClickButton(boardRoot, "EvidenceCard1");
+        ClickButton(boardRoot, "BackButton");
+        Require(notes.text == "Моя временна хипотеза" && boardSession.Notes == notes.text,
+            "Board notes survive Detail and Back");
         ClickButton(boardRoot, "LinkCardsButton");
         ClickButton(boardRoot, "EvidenceCard1");
         ClickButton(boardRoot, "EvidenceCard1");
@@ -808,6 +814,16 @@ public static class OfficeFlowSmokeTest
             && boardSession.HasLink(1, 2),
             "Board notes and links survive Exit and re-entry in the same session");
         ClickButton(boardRoot, "RemoveLink2");
+        ClickButton(boardRoot, "LinkCardsButton");
+        ClickButton(boardRoot, "EvidenceCard1");
+        ClickButton(boardRoot, "ExitBoardButton");
+        World();
+        Aim(tool);
+        tool.Interact();
+        Require(!Field<bool>(ui, "linking") && boardSession.Links.Count == 0
+            && Field<TMP_InputField>(ui, "notesInput").text == "Моя временна хипотеза",
+            "Board Exit clears an unfinished selection without losing notes");
+        BoardPlayerNotesSmokeTest.AssertPreserved(boardRoot, boardSession);
         ClickButton(boardRoot, "ExitBoardButton");
         World();
     }
@@ -885,7 +901,8 @@ public static class OfficeFlowSmokeTest
                 if (scaler != null) scaler.enabled = false;
                 canvas.renderMode = RenderMode.ScreenSpaceCamera;
                 canvas.worldCamera = camera;
-                canvas.planeDistance = .5f;
+                // Overlay UI не се закрива от world geometry; capture plane-ът остава до near clip.
+                canvas.planeDistance = camera.nearClipPlane + .001f;
                 canvas.scaleFactor = width / 1920f;
             }
             Canvas.ForceUpdateCanvases();
