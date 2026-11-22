@@ -402,7 +402,8 @@ public static class ComputerUISetupTool
         CreateLayoutText("RecordDateLabelText", recordDetails, "ДАТА", 15f, SecondaryTextColor, 24f, true);
         TMP_Text recordDate = CreateLayoutText("RecordDateText", recordDetails, string.Empty, 18f, DarkTextColor, 32f);
         CreateLayoutText("RecordBodyLabelText", recordDetails, "СЛУЖЕБЕН ЗАПИС", 15f, SecondaryTextColor, 24f, true);
-        TMP_Text recordBody = CreateLayoutText("RecordBodyText", recordDetails, string.Empty, 17f, DarkTextColor, 180f);
+        TMP_Text recordBody = CreateLayoutText("RecordBodyText", recordDetails, string.Empty, 17f, DarkTextColor, 220f);
+        GetOrAdd<LayoutElement>(recordBody.gameObject).flexibleHeight = 1f;
 
         AddListener(overviewButton, controller.ShowOverview);
         AddListener(peopleButton, controller.ShowPeople);
@@ -814,12 +815,208 @@ public static class ComputerUISetupTool
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    [MenuItem("Tools/DetectiveGame/Sync Case Files Data")]
+    public static void SyncCaseFilesData()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            throw new InvalidOperationException("Sync Case Files Data не се изпълнява в Play Mode");
+        }
+
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ScenePath)
+        {
+            scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        }
+
+        CaseFilesUIController caseController = FindSceneComponent<CaseFilesUIController>(scene);
+        if (caseController == null)
+        {
+            throw new InvalidOperationException("Scene няма CaseFilesUIController");
+        }
+
+        PopulateCaseData(caseController);
+        EditorUtility.SetDirty(caseController);
+        EditorSceneManager.MarkSceneDirty(scene);
+        if (!EditorSceneManager.SaveScene(scene))
+        {
+            throw new InvalidOperationException("DetectiveOffice scene не беше записана");
+        }
+
+        Debug.Log("ComputerUISetupTool.SyncCaseFilesData обнови CaseFiles данните в DetectiveOffice.unity");
+    }
+
     private static void PopulateCaseData(CaseFilesUIController controller)
     {
         SerializedObject serialized = new SerializedObject(controller);
         SerializedProperty cases = serialized.FindProperty("cases");
-        cases.arraySize = 2;
-        SerializedProperty activeCase = cases.GetArrayElementAtIndex(0);
+        cases.arraySize = 3;
+
+        SerializedProperty orionCase = cases.GetArrayElementAtIndex(0);
+        SetCase(orionCase, "CASE-ORION-01", "Project Orion — Кражба на прототип", "ОТВОРЕНО",
+            "—", "Blackwood Technologies, Лондон", "Няма (кражба на експериментален прототип)", "—",
+            "Експерименталният прототип Project Orion е изчезнал от заключена изследователска лаборатория в Blackwood Technologies в Лондон. Няма следи от взлом, а охранителната аларма не се е задействала. Разследването е в начален етап.");
+        SerializedProperty orionPeople = orionCase.FindPropertyRelative("people");
+        orionPeople.arraySize = 4;
+        SetPerson(orionPeople.GetArrayElementAtIndex(0),
+            "Daniel Brooks",
+            "Техник по сигурността (Security Technician)",
+            "Възраст: 35 г. Поддържа охранителните системи и електронните ключалки на Blackwood Technologies. Познава системата за контрол на достъпа. Първоначално показание: твърди, че е бил вкъщи от 22:00 нататък.");
+        SetPerson(orionPeople.GetArrayElementAtIndex(1),
+            "Emily Carter",
+            "Изследовател (Research Scientist)",
+            "Възраст: 29 г. Работи директно по Project Orion и има разрешен достъп до лабораторията. Първоначално показание: твърди, че е напуснала сградата в 23:20.");
+        SetPerson(orionPeople.GetArrayElementAtIndex(2),
+            "Michael Reed",
+            "Ръководител проект (Project Manager)",
+            "Възраст: 42 г. Отговаря за бюджета и поверителната документация на Project Orion и има достъп до важна информация за проекта. Първоначално показание: твърди, че е бил на бизнес среща до полунощ.");
+        SetPerson(orionPeople.GetArrayElementAtIndex(3),
+            "Sarah Mitchell",
+            "Административен мениджър (Administrative Manager)",
+            "Възраст: 34 г. Управлява служебните карти за достъп и има правомощие да издава временни карти. Първоначално показание: твърди, че е работила от вкъщи същата вечер.");
+
+        SerializedProperty orionRecords = orionCase.FindPropertyRelative("records");
+        orionRecords.arraySize = 23;
+        SetRecord(orionRecords.GetArrayElementAtIndex(0),
+            "doc-orion-initial-security-report",
+            "Първоначален доклад на охраната",
+            "Доклад на охраната",
+            string.Empty,
+            "Обект: Blackwood Technologies, Лондон\nЛипсващ обект: експериментален прототип Project Orion\n\nХронология на охраната:\n- 23:30 — Лабораторията е проверена и всичко изглежда нормално.\n- 23:45 — Охранителната система отчита събитие за достъп.\n- 00:10 — Охраната установява липсата на прототипа.\n\nКонстатации:\n- Алармата не се е задействала.\n- Лабораторната врата е заключена при пристигането на охраната.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(1),
+            "doc-orion-cctv-observation",
+            "Справка за CCTV запис — коридор",
+            "Текстова справка (CCTV)",
+            string.Empty,
+            "Текстова справка за видеозапис (няма приложен видеофайл).\nКамера: Изследователски коридор, Blackwood Technologies\n\nНаблюдения от CCTV записа:\n- 23:45 — Неизвестен човек с тъмно яке и качулка влиза в изследователския коридор.\n- Човекът носи малка чанта.\n- Лицето не се разпознава заради качулката.\n- 23:52 — Същият човек напуска коридора.\n- Не се виждат други хора.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(2),
+            "doc-orion-personnel-daniel-brooks",
+            "Служебно досие — Daniel Brooks",
+            "Служебно досие и показание",
+            string.Empty,
+            "Служител: Daniel Brooks\nВъзраст: 35 години\nДлъжност: Техник по сигурността (Security Technician)\n\nСлужебни задължения и достъп:\n- Поддържа охранителните системи и електронните ключалки в Blackwood Technologies.\n- Познава устройството и работата на системата за контрол на достъпа.\n\nДокументирано първоначално показание:\n- Твърди, че в нощта на инцидента е бил вкъщи от 22:00 нататък.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(3),
+            "doc-orion-personnel-emily-carter",
+            "Служебно досие — Emily Carter",
+            "Служебно досие и показание",
+            string.Empty,
+            "Служител: Emily Carter\nВъзраст: 29 години\nДлъжност: Изследовател (Research Scientist)\n\nСлужебни задължения и достъп:\n- Работи директно по експерименталния прототип Project Orion.\n- Има разрешен достъп до изследователската лаборатория.\n\nДокументирано първоначално показание:\n- Твърди, че е напуснала сградата в 23:20.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(4),
+            "doc-orion-personnel-michael-reed",
+            "Служебно досие — Michael Reed",
+            "Служебно досие и показание",
+            string.Empty,
+            "Служител: Michael Reed\nВъзраст: 42 години\nДлъжност: Ръководител проект (Project Manager)\n\nСлужебни задължения и достъп:\n- Отговаря за бюджета и поверителната документация на Project Orion.\n- Има достъп до важна информация за проекта.\n\nДокументирано първоначално показание:\n- Твърди, че е бил на бизнес среща до полунощ.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(5),
+            "doc-orion-personnel-sarah-mitchell",
+            "Служебно досие — Sarah Mitchell",
+            "Служебно досие и показание",
+            string.Empty,
+            "Служител: Sarah Mitchell\nВъзраст: 34 години\nДлъжност: Административен мениджър (Administrative Manager)\n\nСлужебни задължения и достъп:\n- Управлява служебните карти за достъп на служителите.\n- Има правомощие да издава временни карти за достъп.\n\nДокументирано първоначално показание:\n- Твърди, че е работила от вкъщи същата вечер.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(6),
+            "doc-orion-employee-access-records",
+            "Отчет за служебни карти за достъп",
+            "Отчет за достъп",
+            string.Empty,
+            "Обект: Blackwood Technologies, Лондон\nИзвлечение от регистъра за служебен достъп и карти:\n\n- 21:40 — Картата на Michael Reed е използвана последно.\n- 22:15 — Daniel Brooks е осъществил достъп до системата за сигурност.\n- 23:20 — Emily Carter е използвала картата си при напускане на сградата.\n- Три дни преди кражбата Sarah Mitchell е издала временна карта за достъп. Временната карта не е била официално върната.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(7),
+            "doc-orion-comm-daniel-unknown",
+            "Съобщения — Daniel Brooks / Неизвестен",
+            "Препис на комуникация",
+            string.Empty,
+            "Участници: Daniel Brooks и Неизвестен участник\n\n23:05 — Daniel Brooks:\n„Всичко е готово. Системата няма да засече нищо.“\n\n23:07 — Неизвестен участник:\n„Погрижи се никой да не те види.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(8),
+            "doc-orion-comm-emily-michael",
+            "Съобщения — Emily Carter / Michael Reed",
+            "Препис на комуникация",
+            string.Empty,
+            "Участници: Emily Carter и Michael Reed\n\n21:15 — Emily Carter:\n„Знам какво си направил с бюджета за изследвания.“\n\n21:17 — Michael Reed:\n„Трябва да си държиш устата затворена.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(9),
+            "doc-orion-comm-sarah-unknown",
+            "Съобщения — Sarah Mitchell / Неизвестен",
+            "Препис на комуникация",
+            string.Empty,
+            "Участници: Sarah Mitchell и Неизвестен участник\n\n22:50 — Sarah Mitchell:\n„Дадох ти това, което поиска. Това е последният път.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(10),
+            "doc-orion-daniel-deleted-history",
+            "Изтрита история — Daniel Brooks",
+            "Технически запис",
+            string.Empty,
+            "Обект: Компютър на Daniel Brooks\nВид запис: Възстановен изтрит запис от историята на търсенията\n\nВъзстановена заявка:\n„Как временно да се деактивират електронните известия за достъп, без да се задейства аларма.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(11),
+            "doc-orion-michael-deleted-email",
+            "Изтрит имейл — Michael Reed",
+            "Възстановена кореспонденция",
+            string.Empty,
+            "От: Michael Reed\nДо: Неизвестен получател\nТема: Project Orion — Окончателна оферта\nВреме на изпращане: два дни преди кражбата\n\nСъдържание на възстановения изтрит имейл:\n„Прототипът струва значително повече, отколкото компанията е готова да плати за него. Уредил съм купувач, който е готов да плати 2 милиона евро. Трябва само да го изнесем от сградата.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(12),
+            "doc-orion-financial-transfer-orion-solutions",
+            "Финансов запис — Orion Solutions",
+            "Финансов документ",
+            string.Empty,
+            "Извлечение от финансовата база данни на Blackwood Technologies:\n\n- Наредител: Michael Reed\n- Получател: Orion Solutions (неизвестна банкова сметка)\n- Сума: 15 000 евро\n- Време на превода: пет дни преди кражбата\n- Бележка по регистрацията: компанията Orion Solutions е регистрирана едва две седмици по-рано.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(13),
+            "doc-orion-voice-recording-transcript",
+            "Препис на гласов запис — двама мъже",
+            "Препис на гласов запис",
+            string.Empty,
+            "Препис на възстановен изтрит гласов запис (няма приложен аудиофайл).\nУчастници: два мъжки гласа (нито един от говорещите не е ясно идентифициран).\n\nПърви глас:\n„Купувачът иска потвърждение преди полунощ.“\n\nВтори глас:\n„Не се притеснявай. Имам човек вътре.“\n\nПърви глас:\n„А парите?“\n\nВтори глас:\n„След като прототипът бъде доставен.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(14),
+            "doc-orion-emily-laboratory-notes",
+            "Лабораторни бележки — Emily Carter",
+            "Лабораторни бележки",
+            string.Empty,
+            "Автор: Emily Carter (Изследовател, Project Orion)\nВид документ: Изследователски лабораторни бележки\n\nСтатус на проекта:\n- Експерименталният прототип Project Orion е почти готов за търговско производство.\n\nТехническо предупреждение:\n„Ако прототипът бъде изнесен от контролираната си среда, вътрешните му компоненти могат да станат нестабилни.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(15),
+            "doc-orion-hotel-photograph-description",
+            "Описание на фотография — пред хотел",
+            "Описание на фотография",
+            string.Empty,
+            "Текстово описание на фотография (няма приложено изображение).\nМясто на откриване: Кабинет на Michael Reed\n\nОписание:\n- На фотографията се вижда Michael Reed на среща с мъж пред хотел.\n- Другият мъж е идентифициран като директора на компанията Orion Solutions.\n\nНадпис на гърба на фотографията:\n„Окончателно споразумение. 11 октомври.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(16),
+            "doc-orion-cctv-clock-discrepancy",
+            "Техническа проверка — часовник на CCTV",
+            "Технически доклад",
+            string.Empty,
+            "Обект: Blackwood Technologies, Лондон\nПроверена система: Видеонаблюдение (CCTV) — изследователски коридор\n\nКонстатация от техническата проверка:\n- При преглед на системата за видеонаблюдение техник установява, че системният часовник на CCTV изостава с 12 минути спрямо реалното време.\n- Всички времеви марки, записани от камерата през нощта на инцидента, са с 12 минути по-ранни от действителния час.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(17),
+            "doc-orion-daniel-phone-location",
+            "Данни за локация — телефон на Daniel Brooks",
+            "Технически запис (локация)",
+            string.Empty,
+            "Обект на записа: Мобилен телефон на Daniel Brooks\nВид запис: История на отчетената локация и мрежова активност на устройството\n\nОтчетени събития:\n- 22:00 — Устройството е отчетено в района на дома му.\n- 23:30 — Устройството е отчетено в района на дома му.\n- 23:55 — Телефонът се е разкачил от мрежата.\n- 00:20 — Телефонът се е свързал отново към мрежата в близост до дома му.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(18),
+            "doc-orion-emily-parking-message",
+            "Препис на съобщение — Emily Carter (23:48)",
+            "Препис на комуникация",
+            string.Empty,
+            "Подател: Emily Carter\nОтчетен час: 23:48\nОтчетено място на изпращане: Паркингът на Blackwood Technologies\n\nТекст на съобщението:\n„Забравих си бележника. Ще се върна утре.“");
+        SetRecord(orionRecords.GetArrayElementAtIndex(19),
+            "doc-orion-temp-card-registration",
+            "Регистър — временна карта за достъп",
+            "Допълнителен запис за достъп",
+            string.Empty,
+            "Обект: База данни за сигурност, Blackwood Technologies\nВид запис: Допълнителна справка за временната карта за достъп, издадена от Sarah Mitchell\n\nРегистрирани данни:\n- Издадена от: Sarah Mitchell\n- Регистрирана на името на: Daniel Brooks\n- 23:56 — Временната карта е активирана в нощта на кражбата.\n- 00:05 — Временната карта е деактивирана.\n- Служебната постоянна карта на Daniel Brooks не е била използвана през същата нощ.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(20),
+            "doc-orion-michael-modified-calendar",
+            "Календарен запис — Michael Reed",
+            "Архив на служебен календар",
+            string.Empty,
+            "Обект: Служебен календар на Michael Reed\nВид запис: История на промените за насрочената бизнес среща\n\nУстановени данни в записа:\n- 22:30 — Бизнес срещата на Michael Reed е отбелязана като отменена.\n- На следващата сутрин записът в календара е бил ръчно редактиран от Michael Reed, така че срещата да се показва като продължила до полунощ.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(21),
+            "doc-orion-torn-paper-record",
+            "Откъснат лист — лабораторна врата",
+            "Архивен запис за веществено доказателство",
+            string.Empty,
+            "Архивен запис за веществено доказателство (текстова справка, без приложен физически оригинал или изображение).\n\nБлизо до лабораторната врата е намерен откъснат лист хартия с ръкописно съобщение.\n\nТекст:\n„Доставката трябва да се извърши преди полунощ. Не се свързвай повече с мен.“\n\nДопълнителна информация:\nПодпис: липсва.\nАвтор: неизвестен.");
+        SetRecord(orionRecords.GetArrayElementAtIndex(22),
+            "doc-orion-security-system-log",
+            "Журнал на системата за сигурност — лаборатория",
+            "Технически запис за електронна брава",
+            string.Empty,
+            "23:45 — Лабораторната врата е отключена.\n23:52 — Лабораторната врата е заключена отново.\n00:10 — Охраната извършва проверка на помещението.\n\nСистемата потвърждава, че за отключването е използвана служебна карта за достъп на служител.");
+
+        SerializedProperty activeCase = cases.GetArrayElementAtIndex(1);
         SetCase(activeCase, "CASE-0017", "Убийство в апартамент на бул. „Ривърсайд“", "ОТВОРЕНО",
             "14 октомври 2011", "бул. „Ривърсайд“ 17", "Даниел Харис", "Майкъл Картър",
             "Жертвата е открита мъртва в апартамента си. Първоначалният доклад отбелязва отзоваване на сигнал в 23:20. Разследването продължава.");
@@ -831,11 +1028,11 @@ public static class ComputerUISetupTool
         SetPerson(activePeople.GetArrayElementAtIndex(3), "Полицай Милър", "Полицай", "Служителят, който е описал претърсването на апартамента.");
         SerializedProperty activeRecords = activeCase.FindPropertyRelative("records");
         activeRecords.arraySize = 3;
-        SetRecord(activeRecords.GetArrayElementAtIndex(0), "Първоначален доклад за инцидента", "Доклад за инцидент", "14/10/2011", "Служителите са се отзовали на сигнал в 23:20 и са обезопасили апартамента.");
-        SetRecord(activeRecords.GetArrayElementAtIndex(1), "Свидетелски показания — Елена Мур", "Свидетелски показания", "14/10/2011", "Свидетелката съобщава за шум в коридора, но не посочва източника му.");
-        SetRecord(activeRecords.GetArrayElementAtIndex(2), "Искане за аутопсия", "Искане за аутопсия", "14/10/2011", "Поискан е официален медицински преглед. Резултатите се очакват.");
+        SetRecord(activeRecords.GetArrayElementAtIndex(0), "doc-case0017-incident-report", "Първоначален доклад за инцидента", "Доклад за инцидент", "14/10/2011", "Служителите са се отзовали на сигнал в 23:20 и са обезопасили апартамента.");
+        SetRecord(activeRecords.GetArrayElementAtIndex(1), "doc-case0017-witness-elena-moore", "Свидетелски показания — Елена Мур", "Свидетелски показания", "14/10/2011", "Свидетелката съобщава за шум в коридора, но не посочва източника му.");
+        SetRecord(activeRecords.GetArrayElementAtIndex(2), "doc-case0017-autopsy-request", "Искане за аутопсия", "Искане за аутопсия", "14/10/2011", "Поискан е официален медицински преглед. Резултатите се очакват.");
 
-        SerializedProperty archivedCase = cases.GetArrayElementAtIndex(1);
+        SerializedProperty archivedCase = cases.GetArrayElementAtIndex(2);
         SetCase(archivedCase, "CASE-0012", "Разследване на пожар в склад", "АРХИВИРАНО",
             "3 октомври 2011", "Северна промишлена зона", "Няма", "Сара Бенет",
             "Първоначалното разследване не открива потвърдени данни за умишлено деяние. Делото е архивирано.");
@@ -844,8 +1041,8 @@ public static class ComputerUISetupTool
         SetPerson(archivedPeople.GetArrayElementAtIndex(0), "Сара Бенет", "Полицай", "Водещият следовател, посочен в архивираното дело.");
         SerializedProperty archivedRecords = archivedCase.FindPropertyRelative("records");
         archivedRecords.arraySize = 2;
-        SetRecord(archivedRecords.GetArrayElementAtIndex(0), "Обобщение от пожарния инспектор", "Официален доклад", "05/10/2011", "Наличните наблюдения не установяват умишлено запалване.");
-        SetRecord(archivedRecords.GetArrayElementAtIndex(1), "Бележка за приключване", "Бележка по делото", "09/10/2011", "Делото е архивирано до получаване на нова официална информация.");
+        SetRecord(archivedRecords.GetArrayElementAtIndex(0), "doc-case0012-fire-inspector-summary", "Обобщение от пожарния инспектор", "Официален доклад", "05/10/2011", "Наличните наблюдения не установяват умишлено запалване.");
+        SetRecord(archivedRecords.GetArrayElementAtIndex(1), "doc-case0012-closure-note", "Бележка за приключване", "Бележка по делото", "09/10/2011", "Делото е архивирано до получаване на нова официална информация.");
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -865,9 +1062,9 @@ public static class ComputerUISetupTool
         SerializedObject serialized = new SerializedObject(controller);
         SerializedProperty photos = serialized.FindProperty("photos");
         photos.arraySize = 3;
-        SetPhoto(photos.GetArrayElementAtIndex(0), "Входът на апартамента", "14/10/2011 23:38", "бул. „Ривърсайд“ 17", "Външен изглед на входа, след като мястото е обезопасено.");
-        SetPhoto(photos.GetArrayElementAtIndex(1), "Кухненската маса", "14/10/2011 23:52", "Кухнята на апартамента", "Обща снимка на масата и близките повърхности.");
-        SetPhoto(photos.GetArrayElementAtIndex(2), "Бележка от паркинг", "15/10/2011 00:06", "Кухнята на апартамента", "Близък кадър на намерената бележка. Снимката документира само външния ѝ вид.");
+        SetPhoto(photos.GetArrayElementAtIndex(0), "photo-case0017-apartment-entrance", "Входът на апартамента", "14/10/2011 23:38", "бул. „Ривърсайд“ 17", "Външен изглед на входа, след като мястото е обезопасено.");
+        SetPhoto(photos.GetArrayElementAtIndex(1), "photo-case0017-kitchen-table", "Кухненската маса", "14/10/2011 23:52", "Кухнята на апартамента", "Обща снимка на масата и близките повърхности.");
+        SetPhoto(photos.GetArrayElementAtIndex(2), "photo-case0017-parking-ticket", "Бележка от паркинг", "15/10/2011 00:06", "Кухнята на апартамента", "Близък кадър на намерената бележка. Снимката документира само външния ѝ вид.");
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
@@ -900,9 +1097,9 @@ public static class ComputerUISetupTool
         SetString(item, "name", name); SetString(item, "role", role); SetString(item, "shortDescription", description);
     }
 
-    private static void SetRecord(SerializedProperty item, string title, string type, string date, string body)
+    private static void SetRecord(SerializedProperty item, string sourceId, string title, string type, string date, string body)
     {
-        SetString(item, "title", title); SetString(item, "recordType", type); SetString(item, "date", date); SetString(item, "body", body);
+        SetString(item, "sourceId", sourceId); SetString(item, "title", title); SetString(item, "recordType", type); SetString(item, "date", date); SetString(item, "body", body);
     }
 
     private static void SetDatabaseRecord(SerializedProperty item, string name, string dob, string address, string occupation, string summary)
@@ -911,9 +1108,9 @@ public static class ComputerUISetupTool
         SetString(item, "occupation", occupation); SetString(item, "recordSummary", summary);
     }
 
-    private static void SetPhoto(SerializedProperty item, string title, string date, string location, string description)
+    private static void SetPhoto(SerializedProperty item, string sourceId, string title, string date, string location, string description)
     {
-        SetString(item, "title", title); SetString(item, "date", date); SetString(item, "location", location); SetString(item, "description", description);
+        SetString(item, "sourceId", sourceId); SetString(item, "title", title); SetString(item, "date", date); SetString(item, "location", location); SetString(item, "description", description);
     }
 
     private static void SetReport(SerializedProperty item, string number, string title, string status, string date,

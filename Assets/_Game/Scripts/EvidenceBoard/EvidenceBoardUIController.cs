@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,7 +50,22 @@ public class EvidenceBoardUIController : MonoBehaviour
     private EvidenceBoardSession session;
     private RectTransform linksLayer;
     private TMP_InputField notesInput;
+    private enum BoardViewMode
+    {
+        Board,
+        Timeline,
+        Theory
+    }
+
     private BoardPlayerNotesView playerNotesView;
+    private BoardAttachedSourcesView attachedSourcesView;
+    private BoardTimelineView timelineView;
+    private BoardCaseTheoryView caseTheoryView;
+    private Button boardModeTabButton;
+    private Button timelineModeTabButton;
+    private Button theoryModeTabButton;
+    private CaseFilesUIController caseFilesController;
+    private PhotosUIController photosController;
     private TMP_Text statusText;
     private TMP_Text detailProvenanceText;
     private Button cancelLinkButton;
@@ -92,6 +108,19 @@ public class EvidenceBoardUIController : MonoBehaviour
             session = new EvidenceBoardSession(evidenceCards.Length);
             BuildSessionUI();
             playerNotesView = BoardPlayerNotesView.Create(boardRoot.transform, session.PlayerNotes, evidenceTitleText.font);
+            attachedSourcesView = BoardAttachedSourcesView.Create(
+                boardRoot.transform,
+                playerNotesView.Frame,
+                playerNotesView.Surface,
+                session.AttachedSources,
+                evidenceTitleText.font,
+                ResolveSourceRecord,
+                playerNotesView.SetHasExternalItems,
+                OnAttachedDetailOpened,
+                BackToBoard);
+            timelineView = BoardTimelineView.Create(boardRoot.transform, session.Timeline, evidenceTitleText.font);
+            caseTheoryView = BoardCaseTheoryView.Create(boardRoot.transform, session.CaseTheories, evidenceTitleText.font);
+            BuildModeTabs();
         }
 
         if (boardRoot != null)
@@ -170,6 +199,11 @@ public class EvidenceBoardUIController : MonoBehaviour
         }
 
         // показва доказателството
+        timelineView?.Hide();
+        caseTheoryView?.Hide();
+        UpdateModeTabVisuals(BoardViewMode.Board);
+        attachedSourcesView?.CloseDetailsSilent();
+        attachedSourcesView?.CancelRemove();
         evidenceTitleText.text = evidence.Title;
         evidenceDescriptionText.text = evidence.Description;
         detailProvenanceText.text = $"{evidence.Type.ToUpperInvariant()} — Източник: {evidence.Source}";
@@ -186,9 +220,50 @@ public class EvidenceBoardUIController : MonoBehaviour
         }
 
         // връща таблото
+        timelineView?.Hide();
+        caseTheoryView?.Hide();
+        UpdateModeTabVisuals(BoardViewMode.Board);
+        attachedSourcesView?.CloseDetailsSilent();
+        attachedSourcesView?.CancelRemove();
         evidenceDetailsPanel.SetActive(false);
         boardPanel.SetActive(true);
         playerNotesView.gameObject.SetActive(true);
+    }
+
+    public void ShowTimeline()
+    {
+        if (!IsOpen || timelineView == null)
+        {
+            return;
+        }
+
+        CancelLink();
+        caseTheoryView?.Hide();
+        attachedSourcesView?.CloseDetailsSilent();
+        attachedSourcesView?.CancelRemove();
+        evidenceDetailsPanel.SetActive(false);
+        boardPanel.SetActive(false);
+        playerNotesView.gameObject.SetActive(false);
+        timelineView.Show();
+        UpdateModeTabVisuals(BoardViewMode.Timeline);
+    }
+
+    public void ShowTheory()
+    {
+        if (!IsOpen || caseTheoryView == null)
+        {
+            return;
+        }
+
+        CancelLink();
+        timelineView?.Hide();
+        attachedSourcesView?.CloseDetailsSilent();
+        attachedSourcesView?.CancelRemove();
+        evidenceDetailsPanel.SetActive(false);
+        boardPanel.SetActive(false);
+        playerNotesView.gameObject.SetActive(false);
+        caseTheoryView.Show();
+        UpdateModeTabVisuals(BoardViewMode.Theory);
     }
 
     public void ExitBoard()
@@ -212,9 +287,215 @@ public class EvidenceBoardUIController : MonoBehaviour
         // затваря таблото
         IsOpen = false;
         CancelLink();
+        timelineView?.Hide();
+        caseTheoryView?.Hide();
+        UpdateModeTabVisuals(BoardViewMode.Board);
+        attachedSourcesView?.CloseDetailsSilent();
+        attachedSourcesView?.CancelRemove();
         evidenceDetailsPanel.SetActive(false);
         boardPanel.SetActive(true);
         boardRoot.SetActive(false);
+    }
+
+    public bool IsSourceAttached(string sourceId, AttachedSourceType sourceType)
+    {
+        Initialize();
+        return session != null && session.AttachedSources.ContainsSource(sourceId, sourceType);
+    }
+
+    public bool TryAttachSource(string sourceId, AttachedSourceType sourceType)
+    {
+        Initialize();
+        if (session == null || string.IsNullOrWhiteSpace(sourceId))
+        {
+            return false;
+        }
+
+        Vector2 spawn = attachedSourcesView != null
+            ? attachedSourcesView.NextSpawnPosition()
+            : new Vector2(.75f, .25f);
+        if (!session.AttachedSources.TryAttach(sourceId, sourceType, spawn.x, spawn.y, out AttachedSource attached))
+        {
+            return false;
+        }
+
+        attachedSourcesView?.AddViewFor(attached);
+        return true;
+    }
+
+    public AttachedSourceSaveDto[] CaptureAttachedSourcesSnapshot()
+    {
+        Initialize();
+        if (session == null) return Array.Empty<AttachedSourceSaveDto>();
+        return AttachedSourcesSaveMapper.ToSaveDtos(session.AttachedSources);
+    }
+
+    public void RestoreAttachedSources(IReadOnlyList<AttachedSource> restoredSources)
+    {
+        Initialize();
+        if (session == null) return;
+        session.AttachedSources.ReplaceAll(restoredSources ?? Array.Empty<AttachedSource>());
+        attachedSourcesView?.RebuildFromSession();
+    }
+
+    private void OnAttachedDetailOpened()
+    {
+        CancelLink();
+        timelineView?.Hide();
+        caseTheoryView?.Hide();
+        evidenceDetailsPanel.SetActive(false);
+        boardPanel.SetActive(false);
+        // EB-005: корковата дъска с Player Notes остава видима и активна редом до страничния preview.
+        playerNotesView.gameObject.SetActive(true);
+    }
+
+    private BoardSourceRecord ResolveSourceRecord(string sourceId, AttachedSourceType sourceType)
+    {
+        if (sourceType == AttachedSourceType.Document)
+        {
+            if (caseFilesController == null)
+            {
+                caseFilesController = FindAnyObjectByType<CaseFilesUIController>(FindObjectsInactive.Include);
+            }
+
+            if (caseFilesController != null
+                && caseFilesController.TryFindRecordBySourceId(sourceId, out CaseData ownerCase, out CaseRecordData record))
+            {
+                string sourceLabel = ownerCase != null && !string.IsNullOrWhiteSpace(ownerCase.CaseNumber)
+                    ? ownerCase.CaseNumber
+                    : "Досиета";
+                return new BoardSourceRecord(
+                    sourceId,
+                    AttachedSourceType.Document,
+                    record.Title,
+                    sourceLabel,
+                    record.RecordType,
+                    record.Date,
+                    record.Body,
+                    null);
+            }
+        }
+        else if (sourceType == AttachedSourceType.Photo)
+        {
+            if (photosController == null)
+            {
+                photosController = FindAnyObjectByType<PhotosUIController>(FindObjectsInactive.Include);
+            }
+
+            if (photosController != null
+                && photosController.TryFindPhotoBySourceId(sourceId, out PhotoData photo))
+            {
+                return new BoardSourceRecord(
+                    sourceId,
+                    AttachedSourceType.Photo,
+                    photo.Title,
+                    "Снимки",
+                    photo.Location,
+                    photo.Date,
+                    photo.Description,
+                    photo.Image);
+            }
+        }
+
+        return BoardSourceRecord.CreateMissing(sourceId, sourceType);
+    }
+
+    public PlayerNoteSaveDto[] CapturePlayerNotesSnapshot()
+    {
+        Initialize();
+        if (session == null) return Array.Empty<PlayerNoteSaveDto>();
+        playerNotesView?.SyncNotesFromUI();
+        return PlayerNotesSaveMapper.ToSaveDtos(session.PlayerNotes);
+    }
+
+    public void RestorePlayerNotes(IReadOnlyList<PlayerNote> restoredNotes)
+    {
+        Initialize();
+        if (session == null) return;
+        session.PlayerNotes.ReplaceAll(restoredNotes ?? Array.Empty<PlayerNote>());
+        playerNotesView?.RebuildFromSession();
+    }
+
+    public TimelineEventSaveDto[] CaptureTimelineSnapshot()
+    {
+        Initialize();
+        if (session == null) return Array.Empty<TimelineEventSaveDto>();
+        return TimelineSaveMapper.ToSaveDtos(session.Timeline);
+    }
+
+    public void RestoreTimeline(IReadOnlyList<TimelineEvent> restoredEvents)
+    {
+        Initialize();
+        if (session == null) return;
+        session.Timeline.ReplaceAll(restoredEvents ?? Array.Empty<TimelineEvent>());
+        timelineView?.RebuildFromSession();
+    }
+
+    public CaseTheorySaveDto[] CaptureCaseTheoriesSnapshot()
+    {
+        Initialize();
+        if (session == null) return Array.Empty<CaseTheorySaveDto>();
+        caseTheoryView?.SyncFromUI();
+        return CaseTheorySaveMapper.ToSaveDtos(session.CaseTheories);
+    }
+
+    public void RestoreCaseTheories(IReadOnlyList<CaseTheoryDraft> restoredTheories)
+    {
+        Initialize();
+        if (session == null) return;
+        session.CaseTheories.ReplaceAll(restoredTheories ?? Array.Empty<CaseTheoryDraft>());
+        caseTheoryView?.RefreshFromSession();
+    }
+
+    private void BuildModeTabs()
+    {
+        Transform root = boardRoot.transform;
+        boardModeTabButton = Button(root, "BoardModeTabButton", "ДЪСКА",
+            new Vector2(.03f, .914f), new Vector2(.175f, .972f),
+            BackToBoard, EvidenceBoardVisuals.ButtonStyle.PrimaryManila);
+        boardModeTabButton.navigation = new Navigation { mode = Navigation.Mode.None };
+
+        timelineModeTabButton = Button(root, "TimelineModeTabButton", "ВРЕМЕВА ЛИНИЯ",
+            new Vector2(.185f, .914f), new Vector2(.385f, .972f),
+            ShowTimeline, EvidenceBoardVisuals.ButtonStyle.CorkControl);
+        timelineModeTabButton.navigation = new Navigation { mode = Navigation.Mode.None };
+
+        theoryModeTabButton = Button(root, "TheoryModeTabButton", "МОЯТА ТЕОРИЯ",
+            new Vector2(.395f, .914f), new Vector2(.595f, .972f),
+            ShowTheory, EvidenceBoardVisuals.ButtonStyle.CorkControl);
+        theoryModeTabButton.navigation = new Navigation { mode = Navigation.Mode.None };
+
+        UpdateModeTabVisuals(BoardViewMode.Board);
+    }
+
+    private void UpdateModeTabVisuals(BoardViewMode activeMode)
+    {
+        if (boardModeTabButton != null)
+        {
+            EvidenceBoardVisuals.ApplyButtonStyle(
+                boardModeTabButton,
+                (Image)boardModeTabButton.targetGraphic,
+                boardModeTabButton.GetComponentInChildren<TMP_Text>(),
+                activeMode == BoardViewMode.Board ? EvidenceBoardVisuals.ButtonStyle.PrimaryManila : EvidenceBoardVisuals.ButtonStyle.CorkControl);
+        }
+
+        if (timelineModeTabButton != null)
+        {
+            EvidenceBoardVisuals.ApplyButtonStyle(
+                timelineModeTabButton,
+                (Image)timelineModeTabButton.targetGraphic,
+                timelineModeTabButton.GetComponentInChildren<TMP_Text>(),
+                activeMode == BoardViewMode.Timeline ? EvidenceBoardVisuals.ButtonStyle.PrimaryManila : EvidenceBoardVisuals.ButtonStyle.CorkControl);
+        }
+
+        if (theoryModeTabButton != null)
+        {
+            EvidenceBoardVisuals.ApplyButtonStyle(
+                theoryModeTabButton,
+                (Image)theoryModeTabButton.targetGraphic,
+                theoryModeTabButton.GetComponentInChildren<TMP_Text>(),
+                activeMode == BoardViewMode.Theory ? EvidenceBoardVisuals.ButtonStyle.PrimaryManila : EvidenceBoardVisuals.ButtonStyle.CorkControl);
+        }
     }
 
     private bool HasRequiredReferences()
@@ -264,14 +545,25 @@ public class EvidenceBoardUIController : MonoBehaviour
             cardProvenanceTexts[i].text = $"{evidenceCards[i].Type.ToUpperInvariant()} — {evidenceCards[i].Source}";
         }
 
+        // Визуална връзка между десния панел с доказателства и лявата коркова дъска.
+        Outline panelOutline = boardPanel.GetComponent<Outline>();
+        if (panelOutline == null) panelOutline = boardPanel.AddComponent<Outline>();
+        panelOutline.effectColor = EvidenceBoardVisuals.BrassHairline;
+        panelOutline.effectDistance = new Vector2(1.5f, -1.5f);
+        RectTransform leftTrim = Rect(panel, "BoardPanelLeftTrim", new Vector2(0f, .01f), new Vector2(.008f, .99f));
+        Image leftTrimImg = leftTrim.gameObject.AddComponent<Image>();
+        leftTrimImg.color = EvidenceBoardVisuals.BrassAccent;
+        leftTrimImg.raycastTarget = false;
+
         linksLayer = Rect(panel, "BoardLinks", Vector2.zero, Vector2.one);
         linksLayer.SetAsFirstSibling();
         Button linkButton = Button(panel, "LinkCardsButton", "СВЪРЖИ", new Vector2(.06f, .38f),
-            new Vector2(.45f, .44f), BeginLink);
+            new Vector2(.45f, .44f), BeginLink, EvidenceBoardVisuals.ButtonStyle.CaseAction);
         cancelLinkButton = Button(panel, "CancelLinkButton", "ОТКАЖИ", new Vector2(.55f, .38f),
-            new Vector2(.94f, .44f), CancelLink);
+            new Vector2(.94f, .44f), CancelLink, EvidenceBoardVisuals.ButtonStyle.CaseMutedDanger);
         statusText = Label(panel, "BoardLinkStatus", "", new Vector2(.06f, .34f),
-            new Vector2(.94f, .38f), 20, TextAlignmentOptions.Center);
+            new Vector2(.94f, .38f), 18, TextAlignmentOptions.Center);
+        statusText.color = EvidenceBoardVisuals.StatusTextColor;
         removeButtons = new Button[LinkPairs.Length];
         removeLabels = new TMP_Text[LinkPairs.Length];
         for (int i = 0; i < LinkPairs.Length; i++)
@@ -279,12 +571,27 @@ public class EvidenceBoardUIController : MonoBehaviour
             Vector2Int pair = LinkPairs[i];
             float top = .34f - i * .05f;
             removeButtons[i] = Button(panel, "RemoveLink" + i, "", new Vector2(.06f, top - .05f),
-                new Vector2(.94f, top), () => RemoveLink(pair.x, pair.y));
+                new Vector2(.94f, top), () => RemoveLink(pair.x, pair.y), EvidenceBoardVisuals.ButtonStyle.CaseMutedDanger);
             removeLabels[i] = removeButtons[i].GetComponentInChildren<TMP_Text>();
-            removeLabels[i].fontSize = 19;
+            removeLabels[i].fontSize = 18;
         }
-        Label(panel, "BoardNotesHeader", "МОИ БЕЛЕЖКИ — Временно — само за тази сесия",
-            new Vector2(.06f, .14f), new Vector2(.94f, .19f), 20, TextAlignmentOptions.Left);
+
+        // Отделена, ясно обозначена наследена зона за старото общо поле за бележки.
+        RectTransform legacyDivider = Rect(panel, "LegacyNotesDivider", new Vector2(.055f, .186f), new Vector2(.945f, .189f));
+        Image legacyDividerImg = legacyDivider.gameObject.AddComponent<Image>();
+        legacyDividerImg.color = EvidenceBoardVisuals.BrassHairline;
+        legacyDividerImg.raycastTarget = false;
+
+        RectTransform legacyFrame = Rect(panel, "LegacyNotesContainer", new Vector2(.055f, .016f), new Vector2(.945f, .184f));
+        Image legacyFrameImg = legacyFrame.gameObject.AddComponent<Image>();
+        legacyFrameImg.sprite = EvidenceBoardVisuals.ButtonSprite;
+        legacyFrameImg.type = Image.Type.Sliced;
+        legacyFrameImg.color = new Color(.06f, .08f, .085f, .78f);
+        legacyFrameImg.raycastTarget = false;
+
+        TMP_Text legacyHeader = Label(panel, "BoardNotesHeader", "ОБЩА БЕЛЕЖКА (НАСЛЕДЕНА) — само за тази сесия",
+            new Vector2(.068f, .142f), new Vector2(.932f, .180f), 15, TextAlignmentOptions.MidlineLeft);
+        legacyHeader.color = EvidenceBoardVisuals.MutedLabelText;
         BuildNotesInput(panel);
         detailProvenanceText = Label((RectTransform)evidenceDetailsPanel.transform, "BoardDetailSource", "",
             new Vector2(.07f, .19f), new Vector2(.93f, .30f), 20, TextAlignmentOptions.Left);
@@ -294,15 +601,22 @@ public class EvidenceBoardUIController : MonoBehaviour
 
     private void BuildNotesInput(RectTransform panel)
     {
-        RectTransform rect = Rect(panel, "BoardNotesInput", new Vector2(.06f, .02f), new Vector2(.94f, .14f));
-        rect.gameObject.AddComponent<Image>().color = new Color(.12f, .14f, .14f, .96f);
+        RectTransform rect = Rect(panel, "BoardNotesInput", new Vector2(.068f, .024f), new Vector2(.932f, .138f));
+        Image bg = rect.gameObject.AddComponent<Image>();
+        bg.sprite = EvidenceBoardVisuals.ButtonSprite;
+        bg.type = Image.Type.Sliced;
+        bg.color = new Color(.10f, .12f, .12f, .96f);
         rect.gameObject.AddComponent<RectMask2D>();
-        TMP_Text value = Label(rect, "Text", "", new Vector2(.02f, .06f), new Vector2(.98f, .94f),
-            18, TextAlignmentOptions.TopLeft);
-        TMP_Text placeholder = Label(rect, "Placeholder", "Напишете собствена бележка",
-            new Vector2(.02f, .06f), new Vector2(.98f, .94f), 18, TextAlignmentOptions.TopLeft);
-        placeholder.color = new Color(.65f, .68f, .64f);
+        TMP_Text value = Label(rect, "Text", "", new Vector2(.025f, .08f), new Vector2(.975f, .92f),
+            16, TextAlignmentOptions.TopLeft);
+        value.textWrappingMode = TextWrappingModes.Normal;
+        TMP_Text placeholder = Label(rect, "Placeholder", "Старо общо поле — за отделни листа използвайте дъската вляво",
+            new Vector2(.025f, .08f), new Vector2(.975f, .92f), 16, TextAlignmentOptions.TopLeft);
+        placeholder.color = new Color(.60f, .63f, .59f, .80f);
+        placeholder.fontStyle = FontStyles.Italic;
+        placeholder.textWrappingMode = TextWrappingModes.Normal;
         notesInput = rect.gameObject.AddComponent<TMP_InputField>();
+        notesInput.targetGraphic = bg;
         notesInput.textViewport = rect;
         notesInput.textComponent = value;
         notesInput.placeholder = placeholder;
@@ -425,15 +739,15 @@ public class EvidenceBoardUIController : MonoBehaviour
     }
 
     private Button Button(Transform parent, string name, string value, Vector2 min, Vector2 max,
-        UnityEngine.Events.UnityAction click)
+        UnityEngine.Events.UnityAction click, EvidenceBoardVisuals.ButtonStyle style)
     {
         RectTransform rect = Rect(parent, name, min, max);
         Image image = rect.gameObject.AddComponent<Image>();
-        image.color = new Color(.15f, .19f, .19f, .96f);
         Button button = rect.gameObject.AddComponent<Button>();
         button.targetGraphic = image;
         button.onClick.AddListener(click);
-        Label(rect, "Label", value, Vector2.zero, Vector2.one, 18, TextAlignmentOptions.Center);
+        TMP_Text label = Label(rect, "Label", value, Vector2.zero, Vector2.one, 18, TextAlignmentOptions.Center);
+        EvidenceBoardVisuals.ApplyButtonStyle(button, image, label, style);
         return button;
     }
 }

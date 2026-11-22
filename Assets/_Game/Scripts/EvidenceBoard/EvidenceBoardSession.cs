@@ -10,6 +10,9 @@ public sealed class EvidenceBoardSession
     public IReadOnlyCollection<(int First, int Second)> Links => links;
     public string Notes { get; set; } = string.Empty;
     public PlayerNotesSession PlayerNotes { get; } = new PlayerNotesSession();
+    public AttachedSourcesSession AttachedSources { get; } = new AttachedSourcesSession();
+    public TimelineSession Timeline { get; } = new TimelineSession();
+    public CaseTheorySession CaseTheories { get; } = new CaseTheorySession();
 
     public EvidenceBoardSession(int cardCount)
     {

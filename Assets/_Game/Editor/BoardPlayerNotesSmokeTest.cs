@@ -53,6 +53,33 @@ internal static class BoardPlayerNotesSmokeTest
             for (int i = 2; i < 5; i++) Click(root, "NewPlayerNoteButton");
             await Task.Delay(50);
             Require(root.GetComponentsInChildren<PlayerNoteView>().Length == 1, "fifth paper opens next page");
+            PlayerNoteView fifthView = View(root, session.PlayerNotes.Notes[4].Id);
+            Input(root, session.PlayerNotes.Notes[4].Id).text = "Пета бележка";
+
+            // EB-002: изтриване с отказ и потвърждение върху последната бележка на страница.
+            ClickChildButton(fifthView.gameObject, "DeleteNoteButton");
+            Click(root, "CancelDeleteNoteButton");
+            Require(session.PlayerNotes.Notes.Count == 5 && root.GetComponentsInChildren<PlayerNoteView>().Length == 1,
+                "canceling delete preserves note and page");
+            ClickChildButton(fifthView.gameObject, "DeleteNoteButton");
+            Click(root, "ConfirmDeleteNoteButton");
+            await Task.Delay(50);
+            Require(session.PlayerNotes.Notes.Count == 4 && root.GetComponentsInChildren<PlayerNoteView>().Length == 4,
+                "confirming delete on last note of page removes it and returns to previous page");
+
+            // EB-002: преместване на три бележки поотделно с ограничаване в дъската и запазване на текста.
+            View(root, session.PlayerNotes.Notes[0].Id).ApplyNormalizedPosition(.31f, .70f);
+            View(root, session.PlayerNotes.Notes[1].Id).ApplyNormalizedPosition(.69f, .68f);
+            View(root, session.PlayerNotes.Notes[2].Id).ApplyNormalizedPosition(0f, 0f);
+            Require(Mathf.Approximately(session.PlayerNotes.Notes[0].NormalizedX, .31f)
+                && Mathf.Approximately(session.PlayerNotes.Notes[1].NormalizedX, .69f)
+                && session.PlayerNotes.Notes[2].NormalizedX > .20f && session.PlayerNotes.Notes[2].NormalizedY > .20f,
+                "moving notes updates normalized positions and clamps inside board");
+
+            // Възстановява петата бележка за проверката на прелистване и запазване между влизанията.
+            Click(root, "NewPlayerNoteButton");
+            await Task.Delay(50);
+            Require(root.GetComponentsInChildren<PlayerNoteView>().Length == 1, "fifth paper opens next page again");
             Input(root, session.PlayerNotes.Notes[4].Id).text = "Пета бележка";
             Click(root, "PreviousNotesPage");
             Require(root.GetComponentsInChildren<PlayerNoteView>().Length == 4, "earlier papers remain accessible");
@@ -85,12 +112,22 @@ internal static class BoardPlayerNotesSmokeTest
             PlayerNote note = session.PlayerNotes.Notes[i];
             Require(note.Text == expected[i] && Input(root, note.Id).text == expected[i], "text retained for " + note.Id);
         }
+        Require(Mathf.Approximately(session.PlayerNotes.Notes[0].NormalizedX, .31f)
+            && Mathf.Approximately(session.PlayerNotes.Notes[0].NormalizedY, .70f)
+            && Mathf.Approximately(session.PlayerNotes.Notes[1].NormalizedX, .69f)
+            && Mathf.Approximately(session.PlayerNotes.Notes[1].NormalizedY, .68f),
+            "moved paper positions survive exit and re-entry");
     }
 
-    private static TMP_InputField Input(GameObject root, string id) => root.GetComponentsInChildren<PlayerNoteView>(true)
-        .Single(view => view.NoteId == id).GetComponent<TMP_InputField>();
+    private static PlayerNoteView View(GameObject root, string id) => root.GetComponentsInChildren<PlayerNoteView>(true)
+        .Single(view => view.NoteId == id);
+
+    private static TMP_InputField Input(GameObject root, string id) => View(root, id).GetComponent<TMP_InputField>();
 
     private static void Click(GameObject root, string name) => root.GetComponentsInChildren<Button>(true)
+        .Single(button => button.name == name).onClick.Invoke();
+
+    private static void ClickChildButton(GameObject parent, string name) => parent.GetComponentsInChildren<Button>(true)
         .Single(button => button.name == name).onClick.Invoke();
 
     private static void Require(bool condition, string message)

@@ -23,6 +23,30 @@ public sealed class PhotosUIController : MonoBehaviour
     private bool isGalleryBuilt;
     private bool hasLoggedMissingWindow;
     private bool hasLoggedMissingGalleryReferences;
+    private PhotoData selectedPhoto;
+    private ComputerBoardAttachBar photoAttachBar;
+    private EvidenceBoardUIController evidenceBoard;
+
+    public bool TryFindPhotoBySourceId(string sourceId, out PhotoData photo)
+    {
+        photo = null;
+        if (string.IsNullOrWhiteSpace(sourceId) || photos == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < photos.Count; i++)
+        {
+            PhotoData candidate = photos[i];
+            if (candidate != null && string.Equals(candidate.SourceId, sourceId, System.StringComparison.Ordinal))
+            {
+                photo = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private void Awake()
     {
@@ -40,6 +64,7 @@ public sealed class PhotosUIController : MonoBehaviour
         // отваря приложението
         photosWindow.SetActive(true);
         BuildGallery();
+        RefreshPhotoAttachBar();
     }
 
     public void ClosePhotos()
@@ -93,6 +118,7 @@ public sealed class PhotosUIController : MonoBehaviour
         }
 
         // показва снимката
+        selectedPhoto = photo;
         if (previewImage != null)
         {
             previewImage.sprite = photo.Image;
@@ -103,10 +129,12 @@ public sealed class PhotosUIController : MonoBehaviour
         SetText(dateText, photo.Date);
         SetText(locationText, photo.Location);
         SetText(descriptionText, photo.Description);
+        RefreshPhotoAttachBar();
     }
 
     private void ClearPhotoDetails()
     {
+        selectedPhoto = null;
         if (previewImage != null)
         {
             previewImage.sprite = null;
@@ -117,6 +145,82 @@ public sealed class PhotosUIController : MonoBehaviour
         SetText(dateText, string.Empty);
         SetText(locationText, string.Empty);
         SetText(descriptionText, string.Empty);
+        photoAttachBar?.SetHidden();
+    }
+
+    private void EnsurePhotoAttachBar()
+    {
+        if (photoAttachBar != null || descriptionText == null || descriptionText.transform.parent == null)
+        {
+            return;
+        }
+
+        // Освобождава ~50px вертикално от рамката за преглед, за да няма text overflow при 1280x720 и 1920x1080.
+        if (previewImage != null && previewImage.transform.parent != null)
+        {
+            LayoutElement frameLayout = previewImage.transform.parent.GetComponent<LayoutElement>();
+            if (frameLayout != null && frameLayout.preferredHeight > 420f)
+            {
+                frameLayout.preferredHeight = 418f;
+            }
+        }
+
+        TMP_FontAsset font = titleText != null ? titleText.font : descriptionText.font;
+        photoAttachBar = ComputerBoardAttachBar.Create(
+            descriptionText.transform.parent,
+            font,
+            "AttachPhotoToBoardButton",
+            AttachSelectedPhotoToBoard);
+    }
+
+    private void RefreshPhotoAttachBar()
+    {
+        EnsurePhotoAttachBar();
+        if (photoAttachBar == null)
+        {
+            return;
+        }
+
+        if (selectedPhoto == null || string.IsNullOrWhiteSpace(selectedPhoto.SourceId))
+        {
+            photoAttachBar.SetHidden();
+            return;
+        }
+
+        EvidenceBoardUIController board = ResolveEvidenceBoard();
+        bool alreadyAttached = board != null
+            && board.IsSourceAttached(selectedPhoto.SourceId, AttachedSourceType.Photo);
+        photoAttachBar.ShowReady(alreadyAttached);
+    }
+
+    private void AttachSelectedPhotoToBoard()
+    {
+        if (selectedPhoto == null || string.IsNullOrWhiteSpace(selectedPhoto.SourceId))
+        {
+            return;
+        }
+
+        EnsurePhotoAttachBar();
+        EvidenceBoardUIController board = ResolveEvidenceBoard();
+        if (board == null)
+        {
+            return;
+        }
+
+        bool added = board.TryAttachSource(selectedPhoto.SourceId, AttachedSourceType.Photo);
+        photoAttachBar?.ShowStatus(added
+            ? ComputerBoardAttachBar.AddedStatusMessage
+            : ComputerBoardAttachBar.AlreadyAttachedStatusMessage);
+    }
+
+    private EvidenceBoardUIController ResolveEvidenceBoard()
+    {
+        if (evidenceBoard == null)
+        {
+            evidenceBoard = FindAnyObjectByType<EvidenceBoardUIController>(FindObjectsInactive.Include);
+        }
+
+        return evidenceBoard;
     }
 
     private void LogMissingWindowOnce()

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public sealed class CaseFilesUIController : MonoBehaviour
 {
@@ -50,8 +51,42 @@ public sealed class CaseFilesUIController : MonoBehaviour
     private bool hasLoggedMissingPeopleReferences;
     private bool hasLoggedMissingRecordsReferences;
     private CaseData selectedCase;
+    private CaseRecordData selectedRecord;
+    private ComputerBoardAttachBar recordAttachBar;
+    private ScrollRect recordBodyScroll;
+    private RectTransform recordBodyScrollContent;
+    private EvidenceBoardUIController evidenceBoard;
     private readonly List<CasePersonEntryUI> generatedPersonEntries = new List<CasePersonEntryUI>();
     private readonly List<CaseRecordEntryUI> generatedRecordEntries = new List<CaseRecordEntryUI>();
+
+    public bool TryFindRecordBySourceId(string sourceId, out CaseData ownerCase, out CaseRecordData record)
+    {
+        ownerCase = null;
+        record = null;
+        if (string.IsNullOrWhiteSpace(sourceId) || cases == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < cases.Count; i++)
+        {
+            CaseData caseData = cases[i];
+            if (caseData == null) continue;
+            IReadOnlyList<CaseRecordData> caseRecords = caseData.Records;
+            for (int j = 0; j < caseRecords.Count; j++)
+            {
+                CaseRecordData candidate = caseRecords[j];
+                if (candidate != null && string.Equals(candidate.SourceId, sourceId, System.StringComparison.Ordinal))
+                {
+                    ownerCase = caseData;
+                    record = candidate;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     public void OpenCaseFiles()
     {
@@ -167,6 +202,7 @@ public sealed class CaseFilesUIController : MonoBehaviour
         SetActive(overviewPanel, false);
         SetActive(peoplePanel, false);
         SetActive(recordsPanel, true);
+        RefreshRecordAttachBar();
     }
 
     public void SelectPerson(CasePersonData person)
@@ -192,10 +228,13 @@ public sealed class CaseFilesUIController : MonoBehaviour
         }
 
         // показва записа
+        selectedRecord = record;
         SetText(recordTitleText, record.Title);
         SetText(recordTypeText, record.RecordType);
         SetText(recordDateText, record.Date);
         SetText(recordBodyText, record.Body);
+        RefreshRecordAttachBar();
+        ResetRecordBodyScrollTop();
     }
 
     private void ClearCaseDetails()
@@ -281,10 +320,168 @@ public sealed class CaseFilesUIController : MonoBehaviour
 
     private void ClearRecordDetails()
     {
+        selectedRecord = null;
         SetText(recordTitleText, string.Empty);
         SetText(recordTypeText, string.Empty);
         SetText(recordDateText, string.Empty);
         SetText(recordBodyText, string.Empty);
+        recordAttachBar?.SetHidden();
+    }
+
+    private void EnsureRecordAttachBar()
+    {
+        if (recordAttachBar != null || recordBodyText == null || recordBodyText.transform.parent == null)
+        {
+            return;
+        }
+
+        Transform detailsPane = recordBodyText.transform.parent;
+        EnsureRecordBodyScrollView(detailsPane);
+
+        TMP_FontAsset font = recordTitleText != null ? recordTitleText.font : recordBodyText.font;
+        recordAttachBar = ComputerBoardAttachBar.Create(
+            detailsPane,
+            font,
+            "AttachCaseRecordToBoardButton",
+            AttachSelectedRecordToBoard);
+    }
+
+    private void EnsureRecordBodyScrollView(Transform detailsPane)
+    {
+        if (recordBodyScroll != null || recordBodyText == null || detailsPane == null)
+        {
+            return;
+        }
+
+        int bodySiblingIndex = recordBodyText.transform.GetSiblingIndex();
+
+        var scrollRootGo = new GameObject(
+            "RecordBodyScrollView",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(ScrollRect),
+            typeof(LayoutElement));
+        RectTransform scrollRoot = scrollRootGo.GetComponent<RectTransform>();
+        scrollRoot.SetParent(detailsPane, false);
+        scrollRoot.SetSiblingIndex(bodySiblingIndex);
+        scrollRoot.localScale = Vector3.one;
+
+        Image scrollBg = scrollRootGo.GetComponent<Image>();
+        scrollBg.color = new Color(1f, 1f, 1f, 0.01f);
+        scrollBg.raycastTarget = true;
+
+        LayoutElement scrollLayout = scrollRootGo.GetComponent<LayoutElement>();
+        scrollLayout.minHeight = 160f;
+        scrollLayout.preferredHeight = 240f;
+        scrollLayout.flexibleHeight = 1f;
+        scrollLayout.flexibleWidth = 1f;
+
+        var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+        RectTransform viewport = viewportGo.GetComponent<RectTransform>();
+        viewport.SetParent(scrollRoot, false);
+        viewport.anchorMin = Vector2.zero;
+        viewport.anchorMax = Vector2.one;
+        viewport.offsetMin = Vector2.zero;
+        viewport.offsetMax = Vector2.zero;
+
+        RectTransform bodyRect = recordBodyText.rectTransform;
+        bodyRect.SetParent(viewport, false);
+        bodyRect.anchorMin = new Vector2(0f, 1f);
+        bodyRect.anchorMax = new Vector2(1f, 1f);
+        bodyRect.pivot = new Vector2(0.5f, 1f);
+        bodyRect.anchoredPosition = Vector2.zero;
+        bodyRect.sizeDelta = new Vector2(0f, bodyRect.sizeDelta.y);
+        bodyRect.localScale = Vector3.one;
+
+        if (recordBodyText.TryGetComponent<LayoutElement>(out LayoutElement bodyLayout))
+        {
+            bodyLayout.enabled = false;
+        }
+
+        ContentSizeFitter fitter = recordBodyText.GetComponent<ContentSizeFitter>();
+        if (fitter == null)
+        {
+            fitter = recordBodyText.gameObject.AddComponent<ContentSizeFitter>();
+        }
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        ScrollRect scroll = scrollRootGo.GetComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.viewport = viewport;
+        scroll.content = bodyRect;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.inertia = true;
+        scroll.decelerationRate = 0.135f;
+        scroll.scrollSensitivity = 28f;
+
+        recordBodyScroll = scroll;
+        recordBodyScrollContent = bodyRect;
+    }
+
+    private void ResetRecordBodyScrollTop()
+    {
+        if (recordBodyScrollContent != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(recordBodyScrollContent);
+        }
+
+        if (recordBodyScroll != null)
+        {
+            recordBodyScroll.verticalNormalizedPosition = 1f;
+        }
+    }
+
+    private void RefreshRecordAttachBar()
+    {
+        EnsureRecordAttachBar();
+        if (recordAttachBar == null)
+        {
+            return;
+        }
+
+        if (selectedRecord == null || string.IsNullOrWhiteSpace(selectedRecord.SourceId))
+        {
+            recordAttachBar.SetHidden();
+            return;
+        }
+
+        EvidenceBoardUIController board = ResolveEvidenceBoard();
+        bool alreadyAttached = board != null
+            && board.IsSourceAttached(selectedRecord.SourceId, AttachedSourceType.Document);
+        recordAttachBar.ShowReady(alreadyAttached);
+    }
+
+    private void AttachSelectedRecordToBoard()
+    {
+        if (selectedRecord == null || string.IsNullOrWhiteSpace(selectedRecord.SourceId))
+        {
+            return;
+        }
+
+        EnsureRecordAttachBar();
+        EvidenceBoardUIController board = ResolveEvidenceBoard();
+        if (board == null)
+        {
+            return;
+        }
+
+        bool added = board.TryAttachSource(selectedRecord.SourceId, AttachedSourceType.Document);
+        recordAttachBar?.ShowStatus(added
+            ? ComputerBoardAttachBar.AddedStatusMessage
+            : ComputerBoardAttachBar.AlreadyAttachedStatusMessage);
+    }
+
+    private EvidenceBoardUIController ResolveEvidenceBoard()
+    {
+        if (evidenceBoard == null)
+        {
+            evidenceBoard = FindAnyObjectByType<EvidenceBoardUIController>(FindObjectsInactive.Include);
+        }
+
+        return evidenceBoard;
     }
 
     private static void ClearGeneratedEntries<T>(List<T> entries) where T : Component

@@ -8,5 +8,15 @@
     <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/EvidenceBoardSession.cs" Link="EvidenceBoardSession.cs" />
     <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/PlayerNote.cs" Link="PlayerNote.cs" />
     <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/PlayerNotesSession.cs" Link="PlayerNotesSession.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/PlayerNotesSaveData.cs" Link="PlayerNotesSaveData.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/AttachedSource.cs" Link="AttachedSource.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/AttachedSourcesSession.cs" Link="AttachedSourcesSession.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/AttachedSourcesSaveData.cs" Link="AttachedSourcesSaveData.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/TimelineEvent.cs" Link="TimelineEvent.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/TimelineSession.cs" Link="TimelineSession.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/TimelineSaveData.cs" Link="TimelineSaveData.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/CaseTheoryDraft.cs" Link="CaseTheoryDraft.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/CaseTheorySession.cs" Link="CaseTheorySession.cs" />
+    <Compile Include="../../Assets/_Game/Scripts/EvidenceBoard/CaseTheorySaveData.cs" Link="CaseTheorySaveData.cs" />
   </ItemGroup>
 </Project>
