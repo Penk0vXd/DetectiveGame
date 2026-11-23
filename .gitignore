@@ -119,7 +119,6 @@ InitTestScene*.unity*
 /Tests/**/obj/
 
 # Local project documentation and AI instructions
-/Docs/
+/gameDocs/
 /DetectiveGame_Docs/
-/*.md
 /.cursor/rules/

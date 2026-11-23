@@ -11,6 +11,11 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
     private TMP_FontAsset font;
     private Action closeRequested;
     private Action removeRequested;
+    private string documentBadgeLabel = "ПРЕГЛЕД • КОПИЕ НА ДОКУМЕНТ";
+    private string photoBadgeLabel = "ПРЕГЛЕД • КОПИЕ НА СНИМКА";
+    private string closeButtonName = "AttachedDetailBackButton";
+    private string closeButtonLabel = "ЗАТВОРИ";
+    private bool showRemoveButton = true;
 
     private TMP_Text badgeText;
     private TMP_Text titleText;
@@ -38,8 +43,60 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
     {
         // Позициониран в дясната колона на Evidence Board (същата зона като BoardPanel),
         // така че лявата коркова дъска с бележки остава напълно видима и активна.
-        RectTransform root = PlayerNoteView.Rect(boardRoot, "AttachedSourceDetailsPanel",
-            new Vector2(.52f, .13f), new Vector2(.96f, .90f));
+        return CreateInternal(
+            boardRoot,
+            "AttachedSourceDetailsPanel",
+            new Vector2(.52f, .13f),
+            new Vector2(.96f, .90f),
+            font,
+            onCloseRequested,
+            onRemoveRequested,
+            "ПРЕГЛЕД • КОПИЕ НА ДОКУМЕНТ",
+            "ПРЕГЛЕД • КОПИЕ НА СНИМКА",
+            "AttachedDetailBackButton",
+            "ЗАТВОРИ",
+            showRemove: true);
+    }
+
+    public static BoardSourcePreviewView CreateReadOnlyOverlay(
+        Transform parent,
+        TMP_FontAsset font,
+        Action onCloseRequested,
+        string panelName = "TheorySourcePreviewPanel",
+        string documentBadge = "ПРЕГЛЕД • ОРИГИНАЛЕН ДОКУМЕНТ",
+        string closeLabel = "ЗАТВОРИ ПРЕГЛЕДА",
+        string photoBadge = "ПРЕГЛЕД • ОРИГИНАЛНА СНИМКА")
+    {
+        return CreateInternal(
+            parent,
+            panelName,
+            new Vector2(.08f, .06f),
+            new Vector2(.92f, .94f),
+            font,
+            onCloseRequested,
+            onRemoveRequested: null,
+            documentBadge,
+            photoBadge,
+            "CloseTheorySourcePreviewButton",
+            closeLabel,
+            showRemove: false);
+    }
+
+    private static BoardSourcePreviewView CreateInternal(
+        Transform parent,
+        string panelName,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        TMP_FontAsset font,
+        Action onCloseRequested,
+        Action onRemoveRequested,
+        string documentBadge,
+        string photoBadge,
+        string closeBtnName,
+        string closeBtnLabel,
+        bool showRemove)
+    {
+        RectTransform root = PlayerNoteView.Rect(parent, panelName, anchorMin, anchorMax);
         Image bg = root.gameObject.AddComponent<Image>();
         bg.sprite = EvidenceBoardVisuals.WoodFrameSprite;
         bg.type = Image.Type.Sliced;
@@ -58,6 +115,11 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
         view.font = font;
         view.closeRequested = onCloseRequested;
         view.removeRequested = onRemoveRequested;
+        view.documentBadgeLabel = string.IsNullOrWhiteSpace(documentBadge) ? "ПРЕГЛЕД • ДОКУМЕНТ" : documentBadge;
+        view.photoBadgeLabel = string.IsNullOrWhiteSpace(photoBadge) ? "ПРЕГЛЕД • СНИМКА" : photoBadge;
+        view.closeButtonName = string.IsNullOrWhiteSpace(closeBtnName) ? "AttachedDetailBackButton" : closeBtnName;
+        view.closeButtonLabel = string.IsNullOrWhiteSpace(closeBtnLabel) ? "ЗАТВОРИ" : closeBtnLabel;
+        view.showRemoveButton = showRemove;
         view.Build(root);
         root.gameObject.SetActive(false);
         return view;
@@ -71,7 +133,7 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
         }
 
         bool isPhoto = sourceType == AttachedSourceType.Photo;
-        badgeText.text = isPhoto ? "ПРЕГЛЕД • КОПИЕ НА СНИМКА" : "ПРЕГЛЕД • КОПИЕ НА ДОКУМЕНТ";
+        badgeText.text = isPhoto ? photoBadgeLabel : documentBadgeLabel;
         titleText.text = data.Title;
 
         var metaParts = new List<string>(3);
@@ -85,6 +147,7 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
 
         if (isPhoto)
         {
+            documentBodyText.text = string.Empty;
             photoImage.sprite = data.Image;
             photoImage.enabled = data.Image != null;
             photoMissingLabel.SetActive(data.Image == null);
@@ -92,6 +155,10 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
         }
         else
         {
+            photoImage.sprite = null;
+            photoImage.enabled = false;
+            photoMissingLabel.SetActive(false);
+            photoCaptionText.text = string.Empty;
             documentBodyText.text = data.Body;
         }
 
@@ -120,6 +187,7 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
     {
         if (content != null)
         {
+            Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(content);
         }
 
@@ -184,12 +252,21 @@ public sealed class BoardSourcePreviewView : MonoBehaviour
         footerAccentImg.color = EvidenceBoardVisuals.BrassHairline;
         footerAccentImg.raycastTarget = false;
 
-        CreateButton(inner, "AttachedDetailBackButton", "ЗАТВОРИ",
-            new Vector2(.04f, .024f), new Vector2(.35f, .098f),
-            HandleCloseClicked, EvidenceBoardVisuals.ButtonStyle.CorkControl, 17f);
-        CreateButton(inner, "AttachedDetailRemoveButton", "ПРЕМАХНИ ОТ ДЪСКАТА",
-            new Vector2(.42f, .024f), new Vector2(.96f, .098f),
-            HandleRemoveClicked, EvidenceBoardVisuals.ButtonStyle.CaseMutedDanger, 16.5f);
+        if (showRemoveButton)
+        {
+            CreateButton(inner, closeButtonName, closeButtonLabel,
+                new Vector2(.04f, .024f), new Vector2(.35f, .098f),
+                HandleCloseClicked, EvidenceBoardVisuals.ButtonStyle.CorkControl, 17f);
+            CreateButton(inner, "AttachedDetailRemoveButton", "ПРЕМАХНИ ОТ ДЪСКАТА",
+                new Vector2(.42f, .024f), new Vector2(.96f, .098f),
+                HandleRemoveClicked, EvidenceBoardVisuals.ButtonStyle.CaseMutedDanger, 16.5f);
+        }
+        else
+        {
+            CreateButton(inner, closeButtonName, closeButtonLabel,
+                new Vector2(.30f, .024f), new Vector2(.70f, .098f),
+                HandleCloseClicked, EvidenceBoardVisuals.ButtonStyle.CorkControl, 17f);
+        }
     }
 
     private void BuildDocumentContainer(RectTransform inner)

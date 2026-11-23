@@ -119,7 +119,15 @@ public class EvidenceBoardUIController : MonoBehaviour
                 OnAttachedDetailOpened,
                 BackToBoard);
             timelineView = BoardTimelineView.Create(boardRoot.transform, session.Timeline, evidenceTitleText.font);
-            caseTheoryView = BoardCaseTheoryView.Create(boardRoot.transform, session.CaseTheories, evidenceTitleText.font);
+            caseTheoryView = BoardCaseTheoryView.Create(
+                boardRoot.transform,
+                session.CaseTheories,
+                evidenceTitleText.font,
+                GetCaseDocumentSources,
+                sourceId => ResolveCaseDocumentSourceRecord(CaseTheorySession.DefaultCaseId, sourceId),
+                CaseTheorySession.DefaultCaseId,
+                GetCasePhotoSources,
+                sourceId => ResolveCasePhotoSourceRecord(CaseTheorySession.DefaultCaseId, sourceId));
             BuildModeTabs();
         }
 
@@ -347,6 +355,153 @@ public class EvidenceBoardUIController : MonoBehaviour
         boardPanel.SetActive(false);
         // EB-005: корковата дъска с Player Notes остава видима и активна редом до страничния preview.
         playerNotesView.gameObject.SetActive(true);
+    }
+
+    private IReadOnlyList<BoardSourceRecord> GetCaseDocumentSources(string caseId)
+    {
+        if (string.IsNullOrWhiteSpace(caseId))
+        {
+            return Array.Empty<BoardSourceRecord>();
+        }
+
+        if (caseFilesController == null)
+        {
+            caseFilesController = FindAnyObjectByType<CaseFilesUIController>(FindObjectsInactive.Include);
+        }
+
+        if (caseFilesController == null)
+        {
+            return Array.Empty<BoardSourceRecord>();
+        }
+
+        string trimmedCaseId = caseId.Trim();
+        IReadOnlyList<CaseRecordData> records = caseFilesController.GetRecordsForCase(trimmedCaseId);
+        if (records == null || records.Count == 0)
+        {
+            return Array.Empty<BoardSourceRecord>();
+        }
+
+        var result = new List<BoardSourceRecord>(records.Count);
+        for (int i = 0; i < records.Count; i++)
+        {
+            CaseRecordData record = records[i];
+            if (record == null || string.IsNullOrWhiteSpace(record.SourceId))
+            {
+                continue;
+            }
+
+            result.Add(new BoardSourceRecord(
+                record.SourceId,
+                AttachedSourceType.Document,
+                record.Title,
+                trimmedCaseId,
+                record.RecordType,
+                record.Date,
+                record.Body,
+                null));
+        }
+
+        return result;
+    }
+
+    private BoardSourceRecord ResolveCaseDocumentSourceRecord(string caseId, string sourceId)
+    {
+        if (string.IsNullOrWhiteSpace(caseId) || string.IsNullOrWhiteSpace(sourceId))
+        {
+            return BoardSourceRecord.CreateMissing(sourceId, AttachedSourceType.Document);
+        }
+
+        BoardSourceRecord resolved = ResolveSourceRecord(sourceId, AttachedSourceType.Document);
+        if (resolved == null || resolved.IsMissing)
+        {
+            return BoardSourceRecord.CreateMissing(sourceId, AttachedSourceType.Document);
+        }
+
+        if (!string.Equals(resolved.SourceLabel, caseId.Trim(), StringComparison.Ordinal))
+        {
+            return BoardSourceRecord.CreateMissing(sourceId, AttachedSourceType.Document);
+        }
+
+        return resolved;
+    }
+
+    private IReadOnlyList<BoardSourceRecord> GetCasePhotoSources(string caseId)
+    {
+        if (string.IsNullOrWhiteSpace(caseId))
+        {
+            return Array.Empty<BoardSourceRecord>();
+        }
+
+        if (photosController == null)
+        {
+            photosController = FindAnyObjectByType<PhotosUIController>(FindObjectsInactive.Include);
+        }
+
+        if (photosController == null)
+        {
+            return Array.Empty<BoardSourceRecord>();
+        }
+
+        string trimmedCaseId = caseId.Trim();
+        IReadOnlyList<PhotoData> casePhotos = photosController.GetPhotosForCase(trimmedCaseId);
+        if (casePhotos == null || casePhotos.Count == 0)
+        {
+            return Array.Empty<BoardSourceRecord>();
+        }
+
+        var result = new List<BoardSourceRecord>(casePhotos.Count);
+        for (int i = 0; i < casePhotos.Count; i++)
+        {
+            PhotoData photo = casePhotos[i];
+            if (photo == null || string.IsNullOrWhiteSpace(photo.SourceId) || photo.Image == null)
+            {
+                continue;
+            }
+
+            result.Add(new BoardSourceRecord(
+                photo.SourceId,
+                AttachedSourceType.Photo,
+                photo.Title,
+                trimmedCaseId,
+                photo.Location,
+                photo.Date,
+                photo.Description,
+                photo.Image));
+        }
+
+        return result;
+    }
+
+    private BoardSourceRecord ResolveCasePhotoSourceRecord(string caseId, string sourceId)
+    {
+        if (string.IsNullOrWhiteSpace(caseId) || string.IsNullOrWhiteSpace(sourceId))
+        {
+            return BoardSourceRecord.CreateMissing(sourceId, AttachedSourceType.Photo);
+        }
+
+        if (photosController == null)
+        {
+            photosController = FindAnyObjectByType<PhotosUIController>(FindObjectsInactive.Include);
+        }
+
+        string trimmedCaseId = caseId.Trim();
+        if (photosController != null
+            && photosController.TryFindPhotoForCase(trimmedCaseId, sourceId, out PhotoData photo)
+            && photo != null
+            && photo.Image != null)
+        {
+            return new BoardSourceRecord(
+                photo.SourceId,
+                AttachedSourceType.Photo,
+                photo.Title,
+                trimmedCaseId,
+                photo.Location,
+                photo.Date,
+                photo.Description,
+                photo.Image);
+        }
+
+        return BoardSourceRecord.CreateMissing(sourceId, AttachedSourceType.Photo);
     }
 
     private BoardSourceRecord ResolveSourceRecord(string sourceId, AttachedSourceType sourceType)

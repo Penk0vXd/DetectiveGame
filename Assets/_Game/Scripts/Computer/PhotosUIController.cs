@@ -27,6 +27,55 @@ public sealed class PhotosUIController : MonoBehaviour
     private ComputerBoardAttachBar photoAttachBar;
     private EvidenceBoardUIController evidenceBoard;
 
+    public IReadOnlyList<PhotoData> GetPhotosForCase(string caseNumber)
+    {
+        if (string.IsNullOrWhiteSpace(caseNumber) || photos == null)
+        {
+            return System.Array.Empty<PhotoData>();
+        }
+
+        string trimmedCase = caseNumber.Trim();
+        var result = new List<PhotoData>();
+        for (int i = 0; i < photos.Count; i++)
+        {
+            PhotoData candidate = photos[i];
+            if (candidate != null
+                && !string.IsNullOrWhiteSpace(candidate.CaseId)
+                && string.Equals(candidate.CaseId.Trim(), trimmedCase, System.StringComparison.Ordinal))
+            {
+                result.Add(candidate);
+            }
+        }
+
+        return result;
+    }
+
+    public bool TryFindPhotoForCase(string caseNumber, string sourceId, out PhotoData photo)
+    {
+        photo = null;
+        if (string.IsNullOrWhiteSpace(caseNumber) || string.IsNullOrWhiteSpace(sourceId) || photos == null)
+        {
+            return false;
+        }
+
+        string trimmedCase = caseNumber.Trim();
+        string trimmedSource = sourceId.Trim();
+        for (int i = 0; i < photos.Count; i++)
+        {
+            PhotoData candidate = photos[i];
+            if (candidate != null
+                && !string.IsNullOrWhiteSpace(candidate.CaseId)
+                && string.Equals(candidate.CaseId.Trim(), trimmedCase, System.StringComparison.Ordinal)
+                && string.Equals(candidate.SourceId, trimmedSource, System.StringComparison.Ordinal))
+            {
+                photo = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public bool TryFindPhotoBySourceId(string sourceId, out PhotoData photo)
     {
         photo = null;

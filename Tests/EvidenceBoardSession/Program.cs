@@ -797,6 +797,239 @@ List<CaseTheoryDraft> sanitizedTheories = CaseTheorySaveMapper.PrepareRestore(mi
 Check(skippedMixedTheories == 3 && sanitizedTheories.Count == 1 && sanitizedTheories[0].MainSuspect == "Първи запис",
     "EB-013: invalid and duplicate case theory DTOs are skipped safely");
 
+// EB-014: Manual Evidence References in Case Theory (add, order, dedupe, remove, board independence, case isolation, missing IDs, Save/Load + v5 compat).
+var refBoard = new EvidenceBoardSession(3);
+CaseTheoryDraft refOrion = refBoard.CaseTheories.GetOrCreateDraft("CASE-ORION-01");
+Check(refOrion.ReferencedSourceIds.Count == 0 && refOrion.IsEmpty,
+    "EB-014: new theory draft starts with empty referenced sources list");
+
+// Добавяне само на препратки (без текст в 6-те полета) прави черновата непразна и сериализируема.
+Check(!refOrion.TryAddReferencedSource("") && !refOrion.TryAddReferencedSource("   "),
+    "EB-014: empty or whitespace source IDs are rejected");
+Check(refOrion.TryAddReferencedSource("doc-orion-michael-modified-calendar")
+    && !refOrion.IsEmpty
+    && refOrion.ReferencedSourceIds.Count == 1
+    && refOrion.ContainsReferencedSource("doc-orion-michael-modified-calendar"),
+    "EB-014: adding first source ID marks draft non-empty and stores stable ID");
+Check(refOrion.TryAddReferencedSource("doc-orion-financial-transfer-orion-solutions")
+    && refOrion.TryAddReferencedSource("doc-orion-cctv-clock-discrepancy")
+    && refOrion.ReferencedSourceIds.Count == 3
+    && refOrion.ReferencedSourceIds[0] == "doc-orion-michael-modified-calendar"
+    && refOrion.ReferencedSourceIds[1] == "doc-orion-financial-transfer-orion-solutions"
+    && refOrion.ReferencedSourceIds[2] == "doc-orion-cctv-clock-discrepancy",
+    "EB-014: adding multiple sources preserves exact insertion order");
+Check(!refOrion.TryAddReferencedSource("doc-orion-financial-transfer-orion-solutions")
+    && !refOrion.TryAddReferencedSource("  doc-orion-michael-modified-calendar  ")
+    && refOrion.ReferencedSourceIds.Count == 3,
+    "EB-014: duplicate source IDs are blocked without altering order");
+
+// Независимост от Evidence Board (AttachedSources), PlayerNotes и Timeline.
+Check(refBoard.PlayerNotes.Notes.Count == 0
+    && refBoard.AttachedSources.Sources.Count == 0
+    && refBoard.Timeline.Events.Count == 0,
+    "EB-014: adding theory references does not auto-create Player Notes, Attached Sources or Timeline events");
+Check(refBoard.AttachedSources.TryAttach("doc-orion-michael-modified-calendar", AttachedSourceType.Document, .35f, .65f, out AttachedSource? refAttachedCopy)
+    && refAttachedCopy != null,
+    "EB-014: attach same source to board independently");
+Check(refBoard.AttachedSources.Remove(refAttachedCopy!.AttachmentId)
+    && !refBoard.AttachedSources.ContainsSource("doc-orion-michael-modified-calendar", AttachedSourceType.Document)
+    && refOrion.ContainsReferencedSource("doc-orion-michael-modified-calendar"),
+    "EB-014: removing board copy does not remove theory reference");
+Check(refBoard.AttachedSources.TryAttach("doc-orion-financial-transfer-orion-solutions", AttachedSourceType.Document, .60f, .50f, out _)
+    && refOrion.RemoveReferencedSource("doc-orion-financial-transfer-orion-solutions")
+    && !refOrion.RemoveReferencedSource("doc-orion-financial-transfer-orion-solutions")
+    && refBoard.AttachedSources.ContainsSource("doc-orion-financial-transfer-orion-solutions", AttachedSourceType.Document)
+    && refOrion.ReferencedSourceIds.Count == 2
+    && refOrion.ReferencedSourceIds[0] == "doc-orion-michael-modified-calendar"
+    && refOrion.ReferencedSourceIds[1] == "doc-orion-cctv-clock-discrepancy",
+    "EB-014: removing theory reference preserves board copy and remaining reference order");
+
+// Разделяне по Case ID + запазване на 6-те текстови полета.
+refOrion.SetMainSuspect("Michael Reed");
+refOrion.SetSupportingEvidence("Свободен текст за подкрепящи доказателства на кирилица.");
+CaseTheoryDraft refOtherCase = refBoard.CaseTheories.GetOrCreateDraft("CASE-0017");
+Check(refOtherCase.TryAddReferencedSource("doc-case0017-incident-report")
+    && refOtherCase.ReferencedSourceIds.Count == 1
+    && !refOrion.ContainsReferencedSource("doc-case0017-incident-report")
+    && !refOtherCase.ContainsReferencedSource("doc-orion-michael-modified-calendar"),
+    "EB-014: referenced sources stay strictly isolated per Case ID");
+
+// Save/Load roundtrip + повторен Load без дубликати + липсващ source ID се запазва безопасно + стар v5 без referencedSourceIds.
+string jsonEb014 = JsonSerializer.Serialize(new TestSaveEnvelope
+{
+    version = 5,
+    playerNotes = PlayerNotesSaveMapper.ToSaveDtos(refBoard.PlayerNotes),
+    attachedSources = AttachedSourcesSaveMapper.ToSaveDtos(refBoard.AttachedSources),
+    timelineEvents = TimelineSaveMapper.ToSaveDtos(refBoard.Timeline),
+    caseTheories = CaseTheorySaveMapper.ToSaveDtos(refBoard.CaseTheories)
+}, jsonOptions);
+var loadedEb014 = JsonSerializer.Deserialize<TestSaveEnvelope>(jsonEb014, jsonOptions)!;
+var restoredRefBoard = new EvidenceBoardSession(3);
+restoredRefBoard.CaseTheories.ReplaceAll(CaseTheorySaveMapper.PrepareRestore(loadedEb014.caseTheories, out int eb14Skipped));
+Check(eb14Skipped == 0
+    && restoredRefBoard.CaseTheories.TryGetDraft("CASE-ORION-01", out CaseTheoryDraft? rRefOrion) && rRefOrion != null
+    && rRefOrion.MainSuspect == "Michael Reed"
+    && rRefOrion.SupportingEvidence == "Свободен текст за подкрепящи доказателства на кирилица."
+    && rRefOrion.ReferencedSourceIds.Count == 2
+    && rRefOrion.ReferencedSourceIds[0] == "doc-orion-michael-modified-calendar"
+    && rRefOrion.ReferencedSourceIds[1] == "doc-orion-cctv-clock-discrepancy"
+    && !rRefOrion.ContainsReferencedSource("doc-orion-financial-transfer-orion-solutions")
+    && restoredRefBoard.CaseTheories.TryGetDraft("CASE-0017", out CaseTheoryDraft? rRef0017) && rRef0017 != null
+    && rRef0017.ReferencedSourceIds.Count == 1
+    && rRef0017.ReferencedSourceIds[0] == "doc-case0017-incident-report",
+    "EB-014: Save/Load restores referenced source IDs in order, Cyrillic text fields, removal, and Case ID isolation");
+
+// Повторен Load не дублира препратки.
+restoredRefBoard.CaseTheories.ReplaceAll(CaseTheorySaveMapper.PrepareRestore(loadedEb014.caseTheories, out _));
+Check(restoredRefBoard.CaseTheories.GetOrCreateDraft("CASE-ORION-01").ReferencedSourceIds.Count == 2,
+    "EB-014: repeated Load does not duplicate referenced source IDs");
+
+// Стар v5 Save JSON без поле referencedSourceIds се зарежда с празен списък, без загуба на 6-те полета.
+const string legacyV5WithoutRefsJson = "{\"version\":5,\"caseTheories\":[{\"caseId\":\"CASE-ORION-01\",\"mainSuspect\":\"Emily Carter\",\"supportingEvidence\":\"Бележка\"}]}";
+var loadedLegacyV5 = JsonSerializer.Deserialize<TestSaveEnvelope>(legacyV5WithoutRefsJson, jsonOptions)!;
+List<CaseTheoryDraft> restoredLegacyV5 = CaseTheorySaveMapper.PrepareRestore(loadedLegacyV5.caseTheories, out int skippedLegacyV5);
+Check(skippedLegacyV5 == 0 && restoredLegacyV5.Count == 1
+    && restoredLegacyV5[0].MainSuspect == "Emily Carter"
+    && restoredLegacyV5[0].SupportingEvidence == "Бележка"
+    && restoredLegacyV5[0].ReferencedSourceIds.Count == 0,
+    "EB-014: legacy v5 save without referencedSourceIds loads cleanly with empty reference list");
+
+// Missing source ID в Save се запазва (не се трие мълчаливо при Load), дубликати/празни се чистят безопасно, а играчът може да го премахне.
+var missingAndDupDto = new[]
+{
+    new CaseTheorySaveDto
+    {
+        caseId = "CASE-ORION-01",
+        referencedSourceIds = new[] { "", "   ", "doc-orion-missing-legacy-id", "doc-orion-missing-legacy-id", "doc-orion-cctv-observation" }
+    }
+};
+List<CaseTheoryDraft> restoredMissingRefs = CaseTheorySaveMapper.PrepareRestore(missingAndDupDto, out int skippedMissingRefs);
+Check(skippedMissingRefs == 0 && restoredMissingRefs.Count == 1
+    && restoredMissingRefs[0].ReferencedSourceIds.Count == 2
+    && restoredMissingRefs[0].ReferencedSourceIds[0] == "doc-orion-missing-legacy-id"
+    && restoredMissingRefs[0].ReferencedSourceIds[1] == "doc-orion-cctv-observation"
+    && restoredMissingRefs[0].RemoveReferencedSource("doc-orion-missing-legacy-id")
+    && restoredMissingRefs[0].ReferencedSourceIds.Count == 1,
+    "EB-014: missing source IDs are preserved across Load, duplicates/blanks are sanitized, and player can remove missing ID");
+
+// EB-015: Read-only preview invariants at session/save layer (source ID resolution does not create AttachedSource, does not mutate ReferencedSourceIds or SaveData v5).
+var previewBoard = new EvidenceBoardSession(3);
+CaseTheoryDraft previewDraft = previewBoard.CaseTheories.GetOrCreateDraft("CASE-ORION-01");
+previewDraft.SetMainSuspect("Michael Reed");
+previewDraft.SetReconstruction("Първи ред реконструкция.\nВтори ред.");
+previewDraft.TryAddReferencedSource("doc-orion-michael-modified-calendar");
+previewDraft.TryAddReferencedSource("doc-orion-financial-transfer-orion-solutions");
+previewDraft.TryAddReferencedSource("doc-orion-security-system-log");
+string jsonBeforePreview = JsonSerializer.Serialize(new TestSaveEnvelope
+{
+    version = 5,
+    playerNotes = PlayerNotesSaveMapper.ToSaveDtos(previewBoard.PlayerNotes),
+    attachedSources = AttachedSourcesSaveMapper.ToSaveDtos(previewBoard.AttachedSources),
+    timelineEvents = TimelineSaveMapper.ToSaveDtos(previewBoard.Timeline),
+    caseTheories = CaseTheorySaveMapper.ToSaveDtos(previewBoard.CaseTheories)
+}, jsonOptions);
+// Симулира read-only четене на избраните източници без прикачване към Evidence Board.
+Check(previewBoard.AttachedSources.Sources.Count == 0
+    && previewDraft.ReferencedSourceIds.Count == 3
+    && previewDraft.ReferencedSourceIds[0] == "doc-orion-michael-modified-calendar"
+    && previewDraft.ReferencedSourceIds[1] == "doc-orion-financial-transfer-orion-solutions"
+    && previewDraft.ReferencedSourceIds[2] == "doc-orion-security-system-log",
+    "EB-015: referenced sources can be inspected without any AttachedSource copy on board");
+string jsonAfterPreview = JsonSerializer.Serialize(new TestSaveEnvelope
+{
+    version = 5,
+    playerNotes = PlayerNotesSaveMapper.ToSaveDtos(previewBoard.PlayerNotes),
+    attachedSources = AttachedSourcesSaveMapper.ToSaveDtos(previewBoard.AttachedSources),
+    timelineEvents = TimelineSaveMapper.ToSaveDtos(previewBoard.Timeline),
+    caseTheories = CaseTheorySaveMapper.ToSaveDtos(previewBoard.CaseTheories)
+}, jsonOptions);
+Check(string.Equals(jsonBeforePreview, jsonAfterPreview, StringComparison.Ordinal),
+    "EB-015: read-only preview leaves SaveData v5 byte-for-byte identical");
+
+// EB-016: Type-safe Manual Photo References (synthetic in-memory IDs, Document vs Photo separation, dedupe, remove, board independence, Case ID isolation, v5 Save/Load + backwards compat).
+var photoRefBoard = new EvidenceBoardSession(3);
+CaseTheoryDraft photoDraft = photoRefBoard.CaseTheories.GetOrCreateDraft("CASE-ORION-01");
+Check(photoDraft.ReferencedPhotoSourceIds.Count == 0 && photoDraft.IsEmpty,
+    "EB-016: new theory draft starts with empty photo references list");
+Check(!photoDraft.TryAddReferencedPhotoSource("") && !photoDraft.TryAddReferencedPhotoSource("   "),
+    "EB-016: empty or whitespace photo source IDs rejected");
+
+// Само photo reference прави черновата непразна и сериализируема.
+Check(photoDraft.TryAddReferencedSource(AttachedSourceType.Photo, "synthetic-photo-orion-01")
+    && !photoDraft.IsEmpty
+    && photoDraft.ReferencedPhotoSourceIds.Count == 1
+    && photoDraft.ReferencedSourceIds.Count == 0
+    && photoDraft.ContainsReferencedSource(AttachedSourceType.Photo, "synthetic-photo-orion-01")
+    && !photoDraft.ContainsReferencedSource(AttachedSourceType.Document, "synthetic-photo-orion-01"),
+    "EB-016: photo reference stored independently from document references");
+
+// Еднакъв текстов ID като Document и като Photo не се смесват и не се блокират взаимно.
+const string sharedRawId = "shared-source-id-test";
+Check(photoDraft.TryAddReferencedSource(AttachedSourceType.Document, sharedRawId)
+    && photoDraft.TryAddReferencedSource(AttachedSourceType.Photo, sharedRawId)
+    && !photoDraft.TryAddReferencedSource(AttachedSourceType.Document, sharedRawId)
+    && !photoDraft.TryAddReferencedSource(AttachedSourceType.Photo, sharedRawId)
+    && photoDraft.ReferencedSourceIds.Count == 1
+    && photoDraft.ReferencedPhotoSourceIds.Count == 2,
+    "EB-016: Document and Photo types are strictly separated even with identical raw ID string, with per-type duplicate guards");
+
+// Премахване на photo reference не засяга document reference или AttachedSources.
+Check(photoRefBoard.AttachedSources.TryAttach("synthetic-photo-orion-01", AttachedSourceType.Photo, .40f, .60f, out AttachedSource? boardPhotoCopy)
+    && boardPhotoCopy != null,
+    "EB-016: attach synthetic photo to board independently");
+Check(photoRefBoard.AttachedSources.Remove(boardPhotoCopy!.AttachmentId)
+    && photoDraft.ContainsReferencedPhotoSource("synthetic-photo-orion-01"),
+    "EB-016: removing board photo copy preserves theory photo reference");
+Check(photoDraft.RemoveReferencedSource(AttachedSourceType.Photo, sharedRawId)
+    && !photoDraft.RemoveReferencedSource(AttachedSourceType.Photo, sharedRawId)
+    && photoDraft.ContainsReferencedSource(AttachedSourceType.Document, sharedRawId)
+    && photoDraft.ReferencedPhotoSourceIds.Count == 1
+    && photoDraft.ReferencedPhotoSourceIds[0] == "synthetic-photo-orion-01",
+    "EB-016: removing photo reference does not remove document with same ID");
+
+// Case ID isolation.
+CaseTheoryDraft photoOtherCase = photoRefBoard.CaseTheories.GetOrCreateDraft("CASE-0017");
+Check(photoOtherCase.TryAddReferencedPhotoSource("photo-case0017-parking-ticket")
+    && !photoDraft.ContainsReferencedPhotoSource("photo-case0017-parking-ticket")
+    && !photoOtherCase.ContainsReferencedPhotoSource("synthetic-photo-orion-01"),
+    "EB-016: photo references remain strictly isolated per Case ID");
+
+// Save/Load v5 roundtrip + повторен Load + стар v5 без referencedPhotoSourceIds + липсващ photo ID.
+photoDraft.SetMainSuspect("Michael Reed");
+string jsonEb016 = JsonSerializer.Serialize(new TestSaveEnvelope
+{
+    version = 5,
+    playerNotes = PlayerNotesSaveMapper.ToSaveDtos(photoRefBoard.PlayerNotes),
+    attachedSources = AttachedSourcesSaveMapper.ToSaveDtos(photoRefBoard.AttachedSources),
+    timelineEvents = TimelineSaveMapper.ToSaveDtos(photoRefBoard.Timeline),
+    caseTheories = CaseTheorySaveMapper.ToSaveDtos(photoRefBoard.CaseTheories)
+}, jsonOptions);
+var loadedEb016 = JsonSerializer.Deserialize<TestSaveEnvelope>(jsonEb016, jsonOptions)!;
+var restoredPhotoBoard = new EvidenceBoardSession(3);
+restoredPhotoBoard.CaseTheories.ReplaceAll(CaseTheorySaveMapper.PrepareRestore(loadedEb016.caseTheories, out int eb16Skipped));
+Check(eb16Skipped == 0
+    && restoredPhotoBoard.CaseTheories.TryGetDraft("CASE-ORION-01", out CaseTheoryDraft? rPhotoOrion) && rPhotoOrion != null
+    && rPhotoOrion.MainSuspect == "Michael Reed"
+    && rPhotoOrion.ReferencedSourceIds.Count == 1 && rPhotoOrion.ReferencedSourceIds[0] == sharedRawId
+    && rPhotoOrion.ReferencedPhotoSourceIds.Count == 1 && rPhotoOrion.ReferencedPhotoSourceIds[0] == "synthetic-photo-orion-01"
+    && restoredPhotoBoard.CaseTheories.TryGetDraft("CASE-0017", out CaseTheoryDraft? rPhoto0017) && rPhoto0017 != null
+    && rPhoto0017.ReferencedPhotoSourceIds.Count == 1 && rPhoto0017.ReferencedPhotoSourceIds[0] == "photo-case0017-parking-ticket",
+    "EB-016: Save/Load v5 restores document and photo references separately with Case ID isolation");
+
+restoredPhotoBoard.CaseTheories.ReplaceAll(CaseTheorySaveMapper.PrepareRestore(loadedEb016.caseTheories, out _));
+Check(restoredPhotoBoard.CaseTheories.GetOrCreateDraft("CASE-ORION-01").ReferencedPhotoSourceIds.Count == 1,
+    "EB-016: repeated Load does not duplicate photo references");
+
+// Стар v5 Save JSON без referencedPhotoSourceIds се зарежда чисто с празен списък снимки и запазени документи.
+const string legacyV5NoPhotosJson = "{\"version\":5,\"caseTheories\":[{\"caseId\":\"CASE-ORION-01\",\"mainSuspect\":\"Emily Carter\",\"referencedSourceIds\":[\"doc-orion-cctv-observation\"]}]}";
+var loadedLegacyV5NoPhotos = JsonSerializer.Deserialize<TestSaveEnvelope>(legacyV5NoPhotosJson, jsonOptions)!;
+List<CaseTheoryDraft> restoredLegacyV5NoPhotos = CaseTheorySaveMapper.PrepareRestore(loadedLegacyV5NoPhotos.caseTheories, out int skippedLegacyV5NoPhotos);
+Check(skippedLegacyV5NoPhotos == 0 && restoredLegacyV5NoPhotos.Count == 1
+    && restoredLegacyV5NoPhotos[0].ReferencedSourceIds.Count == 1
+    && restoredLegacyV5NoPhotos[0].ReferencedSourceIds[0] == "doc-orion-cctv-observation"
+    && restoredLegacyV5NoPhotos[0].ReferencedPhotoSourceIds.Count == 0,
+    "EB-016: legacy v5 save without referencedPhotoSourceIds loads cleanly with empty photo list");
+
 Console.WriteLine("EvidenceBoardSession checks: PASS");
 
 static void Check(bool condition, string name)

@@ -1105,6 +1105,423 @@ public static class OfficeStageTwoSmokeTest
                 && boardSession.Timeline.Events.Count == 3,
                 "EB-013: legacy v4 save without caseTheories loads cleanly with empty theory draft");
 
+            // EB-014: Manual Evidence References in Case Theory (ИЗБРАНИ ИЗТОЧНИЦИ, 23 CASE-ORION-01 docs, selector, dedupe, remove, board independence, missing ID, Save/Load).
+            boardTool.Interact();
+            theoryTab.onClick.Invoke();
+            Require(thPanel.GetComponentsInChildren<TMP_Text>(true).Any(t => t.text == "ИЗБРАНИ ИЗТОЧНИЦИ"),
+                "EB-014: ИЗБРАНИ ИЗТОЧНИЦИ section exists in CaseTheoryPanel");
+            Button addSourceBtn = thPanel.GetComponentsInChildren<Button>(true).Single(b => b.name == "AddTheorySourceButton");
+            GameObject selectorOverlay = thPanel.transform.Find("TheorySourceSelectorOverlay").gameObject;
+            Require(!selectorOverlay.activeSelf, "EB-014: source selector starts closed");
+
+            // Отваряне на selector-а: всички 23 Project Orion документа са налични динамично от CaseFilesUIController.
+            addSourceBtn.onClick.Invoke();
+            Require(selectorOverlay.activeSelf && selectorOverlay.GetComponent<Image>().raycastTarget,
+                "EB-014: AddTheorySourceButton opens modal selector overlay with raycast blocking");
+            Transform selectorContent = selectorOverlay.transform.Find("TheorySourceSelectorDialog/InnerSurface/TheorySourceSelectorScrollView/Viewport/Content");
+            Button[] selectorItemButtons = selectorContent.GetComponentsInChildren<Button>(false);
+            Require(selectorItemButtons.Length == 23
+                && selectorItemButtons.All(b => b.name.StartsWith("TheorySourceSelectorItem_doc-orion-", StringComparison.Ordinal)),
+                "EB-014: selector exposes all 23 CASE-ORION-01 documents without mixing other cases");
+
+            // Затваряне без избор.
+            selectorOverlay.GetComponentsInChildren<Button>(true).Single(b => b.name == "CloseTheorySourceSelectorButton").onClick.Invoke();
+            Require(!selectorOverlay.activeSelf && boardSession.CaseTheories.Drafts.Count == 0,
+                "EB-014: closing selector without selection adds nothing");
+
+            // Ръчно добавяне на два документа + проверка за ред, защита от дубликати и непроменени 6 полета / Notes / Timeline / Board.
+            thSuspect.text = "Michael Reed";
+            thEvidence.text = "Свободен текст за доказателствата.";
+            addSourceBtn.onClick.Invoke();
+            const string refDoc1 = "doc-orion-michael-modified-calendar";
+            const string refDoc2 = "doc-orion-financial-transfer-orion-solutions";
+            selectorContent.Find("TheorySourceSelectorItem_" + refDoc1).GetComponent<Button>().onClick.Invoke();
+            selectorContent.Find("TheorySourceSelectorItem_" + refDoc2).GetComponent<Button>().onClick.Invoke();
+            Require(!selectorContent.Find("TheorySourceSelectorItem_" + refDoc1).GetComponent<Button>().interactable
+                && selectorContent.Find("TheorySourceSelectorItem_" + refDoc1 + "/StatusText").GetComponent<TMP_Text>().text == "ДОБАВЕН"
+                && !selectorContent.Find("TheorySourceSelectorItem_" + refDoc2).GetComponent<Button>().interactable,
+                "EB-014: added items are clearly marked ДОБАВЕН and protected against duplicate clicks");
+            selectorOverlay.GetComponentsInChildren<Button>(true).Single(b => b.name == "CloseTheorySourceSelectorButton").onClick.Invoke();
+
+            Require(boardSession.CaseTheories.TryGetDraft("CASE-ORION-01", out CaseTheoryDraft eb14Draft)
+                && eb14Draft.ReferencedSourceIds.Count == 2
+                && eb14Draft.ReferencedSourceIds[0] == refDoc1
+                && eb14Draft.ReferencedSourceIds[1] == refDoc2
+                && eb14Draft.MainSuspect == "Michael Reed"
+                && eb14Draft.SupportingEvidence == "Свободен текст за доказателствата."
+                && boardSession.PlayerNotes.Notes.Count == 2
+                && boardSession.AttachedSources.Sources.Count == 2
+                && boardSession.Timeline.Events.Count == 3,
+                "EB-014: adding references stores stable IDs in order without mutating text fields, notes, board or timeline");
+
+            // Независимост от Evidence Board: премахване на board копие не трие препратката; премахване на препратка не трие оригинала или board копието.
+            Require(boardUI.TryAttachSource(refDoc1, AttachedSourceType.Document), "EB-014: attach refDoc1 to board");
+            AttachedSource attachedRefDoc1 = boardSession.AttachedSources.Sources.Single(s => s.SourceId == refDoc1);
+            Require(boardSession.AttachedSources.Remove(attachedRefDoc1.AttachmentId)
+                && eb14Draft.ContainsReferencedSource(refDoc1),
+                "EB-014: removing attached board copy preserves theory reference");
+            Require(boardUI.TryAttachSource(refDoc2, AttachedSourceType.Document), "EB-014: attach refDoc2 to board");
+            Transform refList = thPanel.transform.Find("InnerSurface/TheoryFormScrollView/Viewport/Content/TheoryReferencedSourcesSection/TheoryReferencedSourcesList");
+            refList.Find("TheoryReferencedSourceItem_" + refDoc2 + "/RemoveTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+            Require(eb14Draft.ReferencedSourceIds.Count == 1
+                && eb14Draft.ReferencedSourceIds[0] == refDoc1
+                && boardSession.AttachedSources.ContainsSource(refDoc2, AttachedSourceType.Document)
+                && caseFiles.TryFindRecordBySourceId(refDoc2, out _, out CaseRecordData stillRefDoc2)
+                && !string.IsNullOrWhiteSpace(stillRefDoc2.Body),
+                "EB-014: removing theory reference preserves original Case File and board copy");
+            AttachedSource attachedRefDoc2 = boardSession.AttachedSources.Sources.Single(s => s.SourceId == refDoc2);
+            boardSession.AttachedSources.Remove(attachedRefDoc2.AttachmentId);
+
+            // Превключване на табове, Pause/Resume, Exit/Re-entry + Save/Load + повторен Load + липсващ source ID.
+            boardTab.onClick.Invoke();
+            theoryTab.onClick.Invoke();
+            timelineTab.onClick.Invoke();
+            theoryTab.onClick.Invoke();
+            typeof(PauseUIController).GetMethod("Pause", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(pause, null);
+            pause.Resume();
+            thBoardRoot.transform.Find("ExitBoardButton").GetComponent<Button>().onClick.Invoke();
+            boardTool.Interact();
+            theoryTab.onClick.Invoke();
+            Require(eb14Draft.ReferencedSourceIds.Count == 1 && eb14Draft.ReferencedSourceIds[0] == refDoc1,
+                "EB-014: tab switches, Pause/Resume, and Exit/Re-entry preserve referenced sources");
+
+            Require(save.TrySave(out saveMessage), "EB-014: Save with referenced sources succeeds: " + saveMessage);
+            eb14Draft.TryAddReferencedSource(refDoc2);
+            Require(save.TryLoad(out loadMessage)
+                && boardSession.CaseTheories.TryGetDraft("CASE-ORION-01", out CaseTheoryDraft loadedEb14Draft)
+                && loadedEb14Draft.ReferencedSourceIds.Count == 1
+                && loadedEb14Draft.ReferencedSourceIds[0] == refDoc1
+                && loadedEb14Draft.MainSuspect == "Michael Reed",
+                "EB-014: Save/Load restores referenced sources without reviving removed or unsaved ones");
+            Require(save.TryLoad(out loadMessage)
+                && boardSession.CaseTheories.GetOrCreateDraft("CASE-ORION-01").ReferencedSourceIds.Count == 1,
+                "EB-014: repeated Load does not duplicate referenced sources");
+
+            // Липсващ source ID се запазва при Load, визуализира „Недостъпен източник“ и може да бъде премахнат.
+            string savedWithRefJson = File.ReadAllText(savePath);
+            string missingIdJson = savedWithRefJson.Replace(refDoc1, "doc-orion-missing-test-id");
+            File.WriteAllText(savePath, missingIdJson);
+            CaseTheoryDraft missingIdDraft = null;
+            Require(save.TryLoad(out loadMessage)
+                && boardSession.CaseTheories.TryGetDraft("CASE-ORION-01", out missingIdDraft)
+                && missingIdDraft.ReferencedSourceIds.Count == 1
+                && missingIdDraft.ReferencedSourceIds[0] == "doc-orion-missing-test-id",
+                "EB-014: missing source ID is preserved across Load without error");
+            boardTool.Interact();
+            theoryTab.onClick.Invoke();
+            Transform missingRow = refList.Find("TheoryReferencedSourceItem_doc-orion-missing-test-id");
+            Require(missingRow != null
+                && missingRow.Find("InfoColumn/TitleText").GetComponent<TMP_Text>().text == "Недостъпен източник",
+                "EB-014: missing source ID renders neutral Недостъпен източник label");
+            missingRow.Find("RemoveTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+            Require(missingIdDraft.ReferencedSourceIds.Count == 0,
+                "EB-014: player can remove missing source ID reference");
+            thBoardRoot.transform.Find("ExitBoardButton").GetComponent<Button>().onClick.Invoke();
+
+            // EB-015: Quick Read-Only Preview of Referenced Sources (ПРЕГЛЕД, reused BoardSourcePreviewView, modal blocking, state/scroll preservation, board independence, missing & cross-case safety).
+            File.WriteAllText(savePath, savedV4Json);
+            Require(save.TryLoad(out loadMessage), "EB-015: baseline v4 load before EB-015 checks");
+            boardTool.Interact();
+            theoryTab.onClick.Invoke();
+
+            thSuspect.text = "Michael Reed — EB015";
+            thParticipants.text = "Daniel Brooks и Sarah Mitchell";
+            thMotive.text = "Финансов мотив и скрит трансфер.";
+            thReconstruction.text = "Ред 1: достъп в 23:45.\nРед 2: излизане в 23:52.";
+            thEvidence.text = "Свободен текст преди отваряне на прегледа.";
+            thQuestions.text = "Оставащ въпрос за синхронизацията.";
+
+            const string eb15Doc1 = "doc-orion-michael-modified-calendar";
+            const string eb15Doc2 = "doc-orion-financial-transfer-orion-solutions";
+            addSourceBtn.onClick.Invoke();
+            selectorContent.Find("TheorySourceSelectorItem_" + eb15Doc1).GetComponent<Button>().onClick.Invoke();
+            selectorContent.Find("TheorySourceSelectorItem_" + eb15Doc2).GetComponent<Button>().onClick.Invoke();
+            selectorOverlay.GetComponentsInChildren<Button>(true).Single(b => b.name == "CloseTheorySourceSelectorButton").onClick.Invoke();
+
+            // Потвърждава, че документите НЕ са прикачени върху Evidence Board.
+            Require(!boardSession.AttachedSources.ContainsSource(eb15Doc1, AttachedSourceType.Document)
+                && !boardSession.AttachedSources.ContainsSource(eb15Doc2, AttachedSourceType.Document),
+                "EB-015: referenced sources are not attached to Evidence Board prior to preview");
+
+            GameObject previewOverlay = thPanel.transform.Find("TheorySourcePreviewOverlay").gameObject;
+            Require(!previewOverlay.activeSelf && previewOverlay.GetComponent<Image>().raycastTarget,
+                "EB-015: preview overlay starts closed and has modal raycast blocking");
+            BoardSourcePreviewView theoryPreviewView = previewOverlay.GetComponentInChildren<BoardSourcePreviewView>(true);
+            Require(theoryPreviewView != null, "EB-015: TheorySourcePreviewOverlay reuses BoardSourcePreviewView");
+
+            ScrollRect theoryScroll = thPanel.transform.Find("InnerSurface/TheoryFormScrollView").GetComponent<ScrollRect>();
+            theoryScroll.verticalNormalizedPosition = 0.25f;
+
+            // Отваряне на ПРЕГЛЕД за първия документ (без да е прикачен към дъската).
+            Transform eb15Row1 = refList.Find("TheoryReferencedSourceItem_" + eb15Doc1);
+            Button eb15PreviewBtn1 = eb15Row1.Find("PreviewTheorySourceButton").GetComponent<Button>();
+            Require(eb15PreviewBtn1.interactable && eb15PreviewBtn1.GetComponentInChildren<TMP_Text>().text == "ПРЕГЛЕД",
+                "EB-015: valid referenced source has interactable ПРЕГЛЕД button");
+
+            CaseRecordData eb15Record1 = null;
+            CaseRecordData eb15Record2 = null;
+            Require(caseFiles.TryFindRecordBySourceId(eb15Doc1, out _, out eb15Record1)
+                && caseFiles.TryFindRecordBySourceId(eb15Doc2, out _, out eb15Record2),
+                "EB-015: resolve expected original CaseRecordData");
+
+            int attachedBeforePreview = boardSession.AttachedSources.Sources.Count;
+            eb15PreviewBtn1.onClick.Invoke();
+
+            TMP_Text theoryPreviewTitle = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/DetailTitle/Text").GetComponent<TMP_Text>();
+            TMP_Text theoryPreviewMeta = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/DetailMeta/Text").GetComponent<TMP_Text>();
+            TMP_Text theoryPreviewBody = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/DocumentDetailView/Viewport/Content").GetComponent<TMP_Text>();
+            ScrollRect theoryPreviewDocScroll = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/DocumentDetailView").GetComponent<ScrollRect>();
+            Button closeTheoryPreviewBtn = previewOverlay.GetComponentsInChildren<Button>(true).Single(b => b.name == "CloseTheorySourcePreviewButton");
+
+            Require(previewOverlay.activeSelf && theoryPreviewView.IsOpen && thPanel.activeSelf
+                && theoryPreviewTitle.text == eb15Record1.Title
+                && theoryPreviewMeta.text.Contains(eb15Record1.RecordType)
+                && theoryPreviewBody.text == eb15Record1.Body
+                && theoryPreviewDocScroll != null && theoryPreviewDocScroll.vertical
+                && closeTheoryPreviewBtn.GetComponentInChildren<TMP_Text>().text == "ЗАТВОРИ ПРЕГЛЕДА"
+                && previewOverlay.GetComponentsInChildren<Button>(true).All(b => b.name != "AttachedDetailRemoveButton")
+                && boardSession.AttachedSources.Sources.Count == attachedBeforePreview,
+                "EB-015: preview opens original document read-only with title, type, full body, scroll, ЗАТВОРИ ПРЕГЛЕДА and no board mutation");
+
+            // Pause/Resume при отворен preview пази preview и теорията.
+            typeof(PauseUIController).GetMethod("Pause", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(pause, null);
+            Require(interaction.ModeController.IsPaused && previewOverlay.activeSelf && thSuspect.text == "Michael Reed — EB015",
+                "EB-015: Pause preserves open preview and unsaved theory edits");
+            pause.Resume();
+            Require(!interaction.ModeController.IsPaused && previewOverlay.activeSelf && thPanel.activeSelf,
+                "EB-015: Resume returns to open preview inside Theory");
+
+            // Затваряне с ЗАТВОРИ ПРЕГЛЕДА връща в МОЯТА ТЕОРИЯ и пази 6-те полета, скрола и реда на източниците.
+            closeTheoryPreviewBtn.onClick.Invoke();
+            CaseTheoryDraft eb15Draft = boardSession.CaseTheories.GetOrCreateDraft("CASE-ORION-01");
+            Require(!previewOverlay.activeSelf && !theoryPreviewView.IsOpen && thPanel.activeSelf
+                && thSuspect.text == "Michael Reed — EB015"
+                && thParticipants.text == "Daniel Brooks и Sarah Mitchell"
+                && thMotive.text == "Финансов мотив и скрит трансфер."
+                && thReconstruction.text == "Ред 1: достъп в 23:45.\nРед 2: излизане в 23:52."
+                && thEvidence.text == "Свободен текст преди отваряне на прегледа."
+                && thQuestions.text == "Оставащ въпрос за синхронизацията."
+                && Mathf.Approximately(theoryScroll.verticalNormalizedPosition, 0.25f)
+                && eb15Draft.ReferencedSourceIds.Count == 2
+                && eb15Draft.ReferencedSourceIds[0] == eb15Doc1
+                && eb15Draft.ReferencedSourceIds[1] == eb15Doc2
+                && refList.childCount == 3, // EmptyLabel + 2 rows (без дублиране)
+                "EB-015: closing preview returns to Theory and preserves all 6 fields, scroll position, and reference order without duplicates");
+
+            // Последователен преглед на втори документ.
+            refList.Find("TheoryReferencedSourceItem_" + eb15Doc2 + "/PreviewTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+            Require(previewOverlay.activeSelf
+                && theoryPreviewTitle.text == eb15Record2.Title
+                && theoryPreviewBody.text == eb15Record2.Body,
+                "EB-015: opening second referenced document updates preview accurately");
+            closeTheoryPreviewBtn.onClick.Invoke();
+            Require(!previewOverlay.activeSelf, "EB-015: closing second preview succeeds");
+
+            // Независимост от Evidence Board: прикачи -> премахни от дъската -> прегледай отново.
+            Require(boardUI.TryAttachSource(eb15Doc1, AttachedSourceType.Document), "EB-015: attach eb15Doc1 to board");
+            AttachedSource eb15BoardCopy = boardSession.AttachedSources.Sources.Single(s => s.SourceId == eb15Doc1);
+            Require(boardSession.AttachedSources.Remove(eb15BoardCopy.AttachmentId), "EB-015: remove eb15Doc1 copy from board");
+            refList.Find("TheoryReferencedSourceItem_" + eb15Doc1 + "/PreviewTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+            Require(previewOverlay.activeSelf && theoryPreviewTitle.text == eb15Record1.Title
+                && !boardSession.AttachedSources.ContainsSource(eb15Doc1, AttachedSourceType.Document),
+                "EB-015: preview still works after removing board copy without re-attaching");
+            closeTheoryPreviewBtn.onClick.Invoke();
+
+            // Липсващ source ID и чужд Case ID (CASE-0017 в CASE-ORION-01 теория): ПРЕГЛЕД е деактивиран и не отваря стар/празен/чужд документ.
+            eb15Draft.TryAddReferencedSource("doc-orion-missing-eb15");
+            eb15Draft.TryAddReferencedSource("doc-case0017-incident-report");
+            BoardCaseTheoryView theoryViewComponent = thPanel.GetComponent<BoardCaseTheoryView>();
+            theoryViewComponent.RefreshFromSession();
+            Transform eb15MissingRow = refList.Find("TheoryReferencedSourceItem_doc-orion-missing-eb15");
+            Transform eb15CrossCaseRow = refList.Find("TheoryReferencedSourceItem_doc-case0017-incident-report");
+            Require(eb15MissingRow != null
+                && eb15MissingRow.Find("InfoColumn/TitleText").GetComponent<TMP_Text>().text == "Недостъпен източник"
+                && eb15MissingRow.Find("InfoColumn/TypeText").GetComponent<TMP_Text>().text == "Документът не е наличен за преглед."
+                && !eb15MissingRow.Find("PreviewTheorySourceButton").GetComponent<Button>().interactable
+                && !theoryViewComponent.OpenSourcePreview("doc-orion-missing-eb15")
+                && !previewOverlay.activeSelf,
+                "EB-015: missing source ID disables ПРЕГЛЕД, shows neutral text, and never opens stale/empty preview");
+            Require(eb15CrossCaseRow != null
+                && !eb15CrossCaseRow.Find("PreviewTheorySourceButton").GetComponent<Button>().interactable
+                && !theoryViewComponent.OpenSourcePreview("doc-case0017-incident-report")
+                && !previewOverlay.activeSelf,
+                "EB-015: cross-case source ID is blocked by Case ID isolation");
+
+            // Съществуващият Board Source Preview продължава да работи нормално.
+            boardTab.onClick.Invoke();
+            AttachedSourceView existingBoardDoc = thBoardRoot.GetComponentsInChildren<AttachedSourceView>(true)
+                .First(v => v.SourceType == AttachedSourceType.Document);
+            existingBoardDoc.OpenDetails();
+            GameObject existingDetailPanel = thBoardRoot.transform.Find("AttachedSourceDetailsPanel").gameObject;
+            Require(existingDetailPanel.activeSelf && thBoardRoot.transform.Find("PlayerNotesBoard").gameObject.activeInHierarchy,
+                "EB-015: existing Board side-by-side preview still works");
+            existingDetailPanel.GetComponentsInChildren<Button>(true).Single(b => b.name == "AttachedDetailBackButton").onClick.Invoke();
+            Require(!existingDetailPanel.activeSelf, "EB-015: closing existing Board preview still works");
+
+            thBoardRoot.transform.Find("ExitBoardButton").GetComponent<Button>().onClick.Invoke();
+
+            // EB-016: Manual Photo References & Read-Only Preview (real empty-state audit for CASE-ORION-01 + isolated in-memory synthetic photo fixture checks).
+            File.WriteAllText(savePath, savedV4Json);
+            Require(save.TryLoad(out loadMessage), "EB-016: baseline v4 load before EB-016 checks");
+            boardTool.Interact();
+            theoryTab.onClick.Invoke();
+
+            // 1. Реален одит на production сцената: CASE-ORION-01 няма реални снимки, няма cross-case leakage от CASE-0017, Clue 12 остава документ.
+            Require(photosUI.GetPhotosForCase("CASE-ORION-01").Count == 0,
+                "EB-016: production scene has 0 attributed photos for CASE-ORION-01 (no cross-case leakage)");
+            Require(caseFiles.TryFindRecordBySourceId("doc-orion-hotel-photograph-description", out CaseData eb16Clue12Case, out CaseRecordData eb16Clue12Doc)
+                && eb16Clue12Case != null && eb16Clue12Case.CaseNumber == "CASE-ORION-01" && eb16Clue12Doc != null,
+                "EB-016: Clue 12 remains a Document in CASE-ORION-01");
+
+            addSourceBtn.onClick.Invoke();
+            Button docsCategoryBtn = selectorOverlay.transform.Find("TheorySourceSelectorDialog/InnerSurface/TheorySelectorDocumentsTabButton").GetComponent<Button>();
+            Button photosCategoryBtn = selectorOverlay.transform.Find("TheorySourceSelectorDialog/InnerSurface/TheorySelectorPhotosTabButton").GetComponent<Button>();
+            TMP_Text selectorEmptyTmp = selectorContent.Find("TheorySourceSelectorEmpty").GetComponent<TMP_Text>();
+            Require(selectorContent.GetComponentsInChildren<Button>(false).Length == 23,
+                "EB-016: Documents tab in selector still shows all 23 CASE-ORION-01 documents");
+
+            photosCategoryBtn.onClick.Invoke();
+            Require(selectorContent.GetComponentsInChildren<Button>(false).Length == 0
+                && selectorEmptyTmp.gameObject.activeSelf
+                && selectorEmptyTmp.text == "Няма налични снимки за това дело.",
+                "EB-016: Photos tab shows neutral empty state when CASE-ORION-01 has no real photos");
+            docsCategoryBtn.onClick.Invoke();
+            Require(selectorContent.GetComponentsInChildren<Button>(false).Length == 23,
+                "EB-016: switching back to Documents tab restores all 23 CASE-ORION-01 documents");
+            selectorOverlay.GetComponentsInChildren<Button>(true).Single(b => b.name == "CloseTheorySourceSelectorButton").onClick.Invoke();
+
+            // 2. Изолиран синтетичен in-memory Photo fixture (не се записва в сцената; възстановява се в finally).
+            FieldInfo photosListField = typeof(PhotosUIController).GetField("photos", BindingFlags.Instance | BindingFlags.NonPublic);
+            var runtimePhotosList = (List<PhotoData>)photosListField.GetValue(photosUI);
+            int originalPhotosCount = runtimePhotosList.Count;
+            Texture2D synthTex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+            Sprite synthSprite = Sprite.Create(synthTex, new Rect(0, 0, 16, 16), new Vector2(.5f, .5f));
+            PhotoData synthOrionPhoto = new PhotoData();
+            PhotoData synthOrionMissingAssetPhoto = new PhotoData();
+            PhotoData synthOtherCasePhoto = new PhotoData();
+            typeof(PhotoData).GetField("sourceId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, "synthetic-eb16-orion-photo");
+            typeof(PhotoData).GetField("caseId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, "CASE-ORION-01");
+            typeof(PhotoData).GetField("title", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, "Синтетична снимка Orion");
+            typeof(PhotoData).GetField("location", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, "Лаборатория");
+            typeof(PhotoData).GetField("date", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, "2000-01-01");
+            typeof(PhotoData).GetField("description", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, "Тестово описание на синтетична снимка.");
+            typeof(PhotoData).GetField("image", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionPhoto, synthSprite);
+
+            typeof(PhotoData).GetField("sourceId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionMissingAssetPhoto, "synthetic-eb16-missing-asset");
+            typeof(PhotoData).GetField("caseId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionMissingAssetPhoto, "CASE-ORION-01");
+            typeof(PhotoData).GetField("title", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOrionMissingAssetPhoto, "Снимка без asset");
+
+            typeof(PhotoData).GetField("sourceId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOtherCasePhoto, "synthetic-eb16-case0017-photo");
+            typeof(PhotoData).GetField("caseId", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOtherCasePhoto, "CASE-0017");
+            typeof(PhotoData).GetField("title", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOtherCasePhoto, "Чужда снимка CASE-0017");
+            typeof(PhotoData).GetField("image", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(synthOtherCasePhoto, synthSprite);
+
+            try
+            {
+                runtimePhotosList.Add(synthOrionPhoto);
+                runtimePhotosList.Add(synthOrionMissingAssetPhoto);
+                runtimePhotosList.Add(synthOtherCasePhoto);
+
+                thSuspect.text = "Michael Reed — EB016";
+                theoryScroll.verticalNormalizedPosition = 0.30f;
+
+                addSourceBtn.onClick.Invoke();
+                // Добавя 1 документ и 1 валидна синтетична снимка за CASE-ORION-01.
+                selectorContent.Find("TheorySourceSelectorItem_" + eb15Doc1).GetComponent<Button>().onClick.Invoke();
+                photosCategoryBtn.onClick.Invoke();
+                Button[] synthPhotoButtons = selectorContent.GetComponentsInChildren<Button>(false);
+                Require(synthPhotoButtons.Length == 1 && synthPhotoButtons[0].name == "TheoryPhotoSelectorItem_synthetic-eb16-orion-photo",
+                    "EB-016: Photos tab shows only valid CASE-ORION-01 photo with asset (excludes missing asset and CASE-0017 photo)");
+                synthPhotoButtons[0].onClick.Invoke();
+                Require(!selectorContent.Find("TheoryPhotoSelectorItem_synthetic-eb16-orion-photo").GetComponent<Button>().interactable,
+                    "EB-016: added photo is protected against duplicate clicks in selector");
+                selectorOverlay.GetComponentsInChildren<Button>(true).Single(b => b.name == "CloseTheorySourceSelectorButton").onClick.Invoke();
+
+                // Отваряне на Photo Preview (без прикачено копие на дъската).
+                Transform synthPhotoRow = refList.Find("TheoryReferencedPhotoItem_synthetic-eb16-orion-photo");
+                Require(synthPhotoRow != null
+                    && synthPhotoRow.Find("InfoColumn/TypeText").GetComponent<TMP_Text>().text.StartsWith("СНИМКА", StringComparison.Ordinal)
+                    && !boardSession.AttachedSources.ContainsSource("synthetic-eb16-orion-photo", AttachedSourceType.Photo),
+                    "EB-016: selected photo row displays СНИМКА type and does not attach to Evidence Board");
+
+                synthPhotoRow.Find("PreviewTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+                Image theoryPreviewPhotoImg = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/PhotoDetailView/PhotoPrintFrame/PhotoMatte/DetailPhotoImage").GetComponent<Image>();
+                GameObject theoryPreviewDocContainer = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/DocumentDetailView").gameObject;
+                GameObject theoryPreviewPhotoContainer = previewOverlay.transform.Find("TheorySourcePreviewPanel/InnerSurface/PhotoDetailView").gameObject;
+
+                Require(previewOverlay.activeSelf
+                    && theoryPreviewPhotoContainer.activeSelf
+                    && !theoryPreviewDocContainer.activeSelf
+                    && theoryPreviewTitle.text == "Синтетична снимка Orion"
+                    && theoryPreviewPhotoImg.sprite == synthSprite
+                    && theoryPreviewPhotoImg.enabled
+                    && string.IsNullOrEmpty(theoryPreviewBody.text),
+                    "EB-016: Photo Preview renders synthetic sprite, title, and clears document body via reused BoardSourcePreviewView");
+
+                closeTheoryPreviewBtn.onClick.Invoke();
+                Require(!previewOverlay.activeSelf
+                    && thSuspect.text == "Michael Reed — EB016"
+                    && Mathf.Approximately(theoryScroll.verticalNormalizedPosition, 0.30f),
+                    "EB-016: closing Photo Preview returns to Theory preserving text and scroll position");
+
+                // Превключване към Document Preview чисти предишния Sprite.
+                refList.Find("TheoryReferencedSourceItem_" + eb15Doc1 + "/PreviewTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+                Require(previewOverlay.activeSelf
+                    && theoryPreviewDocContainer.activeSelf
+                    && !theoryPreviewPhotoContainer.activeSelf
+                    && theoryPreviewPhotoImg.sprite == null,
+                    "EB-016: switching from Photo to Document Preview clears previous sprite cleanly");
+                closeTheoryPreviewBtn.onClick.Invoke();
+
+                // Липсващ asset, неизвестен ID и чужд Case ID за снимки: Недостъпна снимка, ПРЕГЛЕД деактивиран, не отваря последната снимка.
+                CaseTheoryDraft eb16Draft = boardSession.CaseTheories.GetOrCreateDraft("CASE-ORION-01");
+                eb16Draft.TryAddReferencedPhotoSource("synthetic-eb16-missing-asset");
+                eb16Draft.TryAddReferencedPhotoSource("synthetic-eb16-case0017-photo");
+                eb16Draft.TryAddReferencedPhotoSource("synthetic-eb16-nonexistent");
+                theoryViewComponent.RefreshFromSession();
+
+                foreach (string badPhotoId in new[] { "synthetic-eb16-missing-asset", "synthetic-eb16-case0017-photo", "synthetic-eb16-nonexistent" })
+                {
+                    Transform badRow = refList.Find("TheoryReferencedPhotoItem_" + badPhotoId);
+                    Require(badRow != null
+                        && badRow.Find("InfoColumn/TitleText").GetComponent<TMP_Text>().text == "Недостъпна снимка"
+                        && !badRow.Find("PreviewTheorySourceButton").GetComponent<Button>().interactable
+                        && !theoryViewComponent.OpenSourcePreview(AttachedSourceType.Photo, badPhotoId)
+                        && !previewOverlay.activeSelf,
+                        "EB-016: unavailable/missing-asset/cross-case photo shows Недостъпна снимка and refuses preview: " + badPhotoId);
+                    badRow.Find("RemoveTheorySourceButton").GetComponent<Button>().onClick.Invoke();
+                }
+
+                // Save/Load v5 с документ + снимка и повторен Load без дубликати.
+                Require(save.TrySave(out saveMessage), "EB-016: Save v5 with photo + document references succeeds: " + saveMessage);
+                eb16Draft.RemoveReferencedPhotoSource("synthetic-eb16-orion-photo");
+                Require(save.TryLoad(out loadMessage)
+                    && boardSession.CaseTheories.TryGetDraft("CASE-ORION-01", out CaseTheoryDraft loadedEb16Draft)
+                    && loadedEb16Draft.ReferencedSourceIds.Count == 1
+                    && loadedEb16Draft.ReferencedPhotoSourceIds.Count == 1
+                    && loadedEb16Draft.ReferencedPhotoSourceIds[0] == "synthetic-eb16-orion-photo",
+                    "EB-016: Save/Load restores both document and photo references");
+                Require(save.TryLoad(out loadMessage)
+                    && boardSession.CaseTheories.GetOrCreateDraft("CASE-ORION-01").ReferencedPhotoSourceIds.Count == 1,
+                    "EB-016: repeated Load does not duplicate photo references");
+            }
+            finally
+            {
+                while (runtimePhotosList.Count > originalPhotosCount)
+                    runtimePhotosList.RemoveAt(runtimePhotosList.Count - 1);
+                UnityEngine.Object.DestroyImmediate(synthSprite);
+                UnityEngine.Object.DestroyImmediate(synthTex);
+            }
+
+            // Възстановява базовия v4 save за останалата част от smoke теста.
+            File.WriteAllText(savePath, savedV4Json);
+            Require(save.TryLoad(out loadMessage)
+                && boardSession.PlayerNotes.Notes.Count == 2
+                && boardSession.AttachedSources.Sources.Count == 2
+                && boardSession.Timeline.Events.Count == 3
+                && boardSession.CaseTheories.Drafts.Count == 0,
+                "EB-014: restoring baseline v4 save keeps remaining smoke checks intact");
+
             var documentTool = UnityEngine.Object.FindAnyObjectByType<DocumentInteractable>();
             Vector3 documentPosition = documentTool.transform.position;
             documentTool.Interact();

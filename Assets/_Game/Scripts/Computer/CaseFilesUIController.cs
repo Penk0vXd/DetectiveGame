@@ -59,6 +59,26 @@ public sealed class CaseFilesUIController : MonoBehaviour
     private readonly List<CasePersonEntryUI> generatedPersonEntries = new List<CasePersonEntryUI>();
     private readonly List<CaseRecordEntryUI> generatedRecordEntries = new List<CaseRecordEntryUI>();
 
+    public IReadOnlyList<CaseRecordData> GetRecordsForCase(string caseNumber)
+    {
+        if (string.IsNullOrWhiteSpace(caseNumber) || cases == null)
+        {
+            return System.Array.Empty<CaseRecordData>();
+        }
+
+        string trimmed = caseNumber.Trim();
+        for (int i = 0; i < cases.Count; i++)
+        {
+            CaseData caseData = cases[i];
+            if (caseData != null && string.Equals(caseData.CaseNumber, trimmed, System.StringComparison.Ordinal))
+            {
+                return caseData.Records;
+            }
+        }
+
+        return System.Array.Empty<CaseRecordData>();
+    }
+
     public bool TryFindRecordBySourceId(string sourceId, out CaseData ownerCase, out CaseRecordData record)
     {
         ownerCase = null;

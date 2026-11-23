@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-// Сериализируем DTO за работна чернова на теория по конкретно дело (EB-013).
+// Сериализируем DTO за работна чернова на теория по конкретно дело (EB-013, EB-014, EB-016).
 [Serializable]
 public sealed class CaseTheorySaveDto
 {
@@ -12,10 +12,12 @@ public sealed class CaseTheorySaveDto
     public string reconstruction = string.Empty;
     public string supportingEvidence = string.Empty;
     public string unresolvedQuestions = string.Empty;
+    public string[] referencedSourceIds = Array.Empty<string>();
+    public string[] referencedPhotoSourceIds = Array.Empty<string>();
 }
 
 // Преобразуване и валидация между CaseTheorySession и Save DTO.
-// Невалидни или дублирани записи се пропускат безопасно, а старите Save файлове без caseTheories се зареждат с празна чернова.
+// Невалидни или дублирани записи се пропускат безопасно, а старите Save файлове без caseTheories или referencedSourceIds се зареждат чисто.
 public static class CaseTheorySaveMapper
 {
     public static CaseTheorySaveDto[] ToSaveDtos(CaseTheorySession session)
@@ -30,6 +32,13 @@ public static class CaseTheorySaveMapper
             if (draft == null || draft.IsEmpty)
                 continue;
 
+            string[] referencedIds = draft.ReferencedSourceIds.Count == 0
+                ? Array.Empty<string>()
+                : CopyIds(draft.ReferencedSourceIds);
+            string[] referencedPhotoIds = draft.ReferencedPhotoSourceIds.Count == 0
+                ? Array.Empty<string>()
+                : CopyIds(draft.ReferencedPhotoSourceIds);
+
             result.Add(new CaseTheorySaveDto
             {
                 caseId = draft.CaseId,
@@ -38,7 +47,9 @@ public static class CaseTheorySaveMapper
                 motive = draft.Motive,
                 reconstruction = draft.Reconstruction,
                 supportingEvidence = draft.SupportingEvidence,
-                unresolvedQuestions = draft.UnresolvedQuestions
+                unresolvedQuestions = draft.UnresolvedQuestions,
+                referencedSourceIds = referencedIds,
+                referencedPhotoSourceIds = referencedPhotoIds
             });
         }
 
@@ -76,9 +87,22 @@ public static class CaseTheorySaveMapper
                 dto.motive,
                 dto.reconstruction,
                 dto.supportingEvidence,
-                dto.unresolvedQuestions));
+                dto.unresolvedQuestions,
+                dto.referencedSourceIds,
+                dto.referencedPhotoSourceIds));
         }
 
         return restored;
+    }
+
+    private static string[] CopyIds(IReadOnlyList<string> sourceIds)
+    {
+        var copy = new string[sourceIds.Count];
+        for (int i = 0; i < sourceIds.Count; i++)
+        {
+            copy[i] = sourceIds[i];
+        }
+
+        return copy;
     }
 }

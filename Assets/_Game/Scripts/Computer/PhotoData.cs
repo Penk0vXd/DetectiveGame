@@ -5,6 +5,7 @@ using UnityEngine;
 public sealed class PhotoData
 {
     [SerializeField] private string sourceId = string.Empty;
+    [SerializeField] private string caseId = string.Empty;
     [SerializeField] private string title = string.Empty;
     [SerializeField] private string date = string.Empty;
     [SerializeField] private string location = string.Empty;
@@ -12,6 +13,7 @@ public sealed class PhotoData
     [SerializeField] private Sprite image = null;
 
     public string SourceId => sourceId ?? string.Empty;
+    public string CaseId => caseId ?? string.Empty;
     public string Title => title ?? string.Empty;
     public string Date => date ?? string.Empty;
     public string Location => location ?? string.Empty;
