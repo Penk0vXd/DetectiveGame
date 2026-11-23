@@ -177,3 +177,7 @@ Assets/TextMesh?Pro/**/*.jpg  -filter -diff -merge -text
 
 # Exceptions for .asset files such as lightning pre-baking
 LightingData.asset     binary
+
+# Game Art assets (models and textures under 100 MB).
+# Store directly in Git to prevent Git LFS quota issues.
+Assets/_Game/Art/**    -filter -diff -merge -text
